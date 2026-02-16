@@ -1,8 +1,3 @@
-Responsive Portfolio Website Design Using HTML CSS &amp; JavaScript
-
-- Smooth scrolling in each section.
-- Compatible with all mobile devices and with a beautiful and pleasant user interface.
-
 ## Built With
 
 This project was built using these technologies.
