@@ -1,36 +1,17 @@
 {
   "files": {
-    "main.css": "/static/css/main.e70edab6.css",
-    "main.js": "/static/js/main.844f8719.js",
+    "main.css": "/static/css/main.fad21cdc.css",
+    "main.js": "/static/js/main.21453e6f.js",
     "static/js/787.861fdc3f.chunk.js": "/static/js/787.861fdc3f.chunk.js",
-    "static/media/K_12.png": "/static/media/K_12.4e0b07fa675f1635c885.png",
-    "static/media/k_12_2.png": "/static/media/k_12_2.ba73725f429f818028b2.png",
-    "static/media/K_12_4.png": "/static/media/K_12_4.72470c666381cbe01d90.png",
-    "static/media/K_12_1.png": "/static/media/K_12_1.89bc1834c7d8c362a5fc.png",
-    "static/media/GWC_classroom.jpg": "/static/media/GWC_classroom.97136e3363267d392bd3.jpg",
-    "static/media/interweave-screenshot.png": "/static/media/interweave-screenshot.3e1a44d38423e009fedd.png",
-    "static/media/GenAICourse.png": "/static/media/GenAICourse.8953c5adf22856a04478.png",
-    "static/media/adrd.png": "/static/media/adrd.f2b26cae4f1e04631e78.png",
-    "static/media/sensecape.png": "/static/media/sensecape.cb66e8077f8894541276.png",
-    "static/media/conotate-screenshot.png": "/static/media/conotate-screenshot.8d08cb1f155aba988e42.png",
-    "static/media/GWC.jpg": "/static/media/GWC.ef63bb513981ffbd08ac.jpg",
-    "static/media/active-search.png": "/static/media/active-search.d6c699dd1ee37e2926ba.png",
-    "static/media/longitudinal.png": "/static/media/longitudinal.e5593ad1b49b9a447b24.png",
-    "static/media/cogsci.png": "/static/media/cogsci.5200c0ed1a6db556c80e.png",
-    "static/media/relatedly.png": "/static/media/relatedly.daada91a204468f5674d.png",
-    "static/media/HackHolyoke.jpeg": "/static/media/HackHolyoke.ddd87db73562fb8333f5.jpeg",
-    "static/media/polymath.png": "/static/media/polymath.7b2a3f924949890cb3eb.png",
-    "static/media/GIT.jpg": "/static/media/GIT.3c9b18b0c20c550f5fe0.jpg",
-    "static/media/PractitionerValueFramework.jpeg": "/static/media/PractitionerValueFramework.330e723402332fd1413f.jpeg",
-    "static/media/prototyping.jpg": "/static/media/prototyping.aa865b5464d5088d5699.jpg",
-    "static/media/SrishtiPalani.jpeg": "/static/media/SrishtiPalani.7e07d1b7fcce4ef63413.jpeg",
+    "static/media/SrishtiPalani.png": "/static/media/SrishtiPalani.52dc3419e8a52957fa4a.png",
+    "static/media/SrishtiPalaniPronunciation.mp3": "/static/media/SrishtiPalaniPronunciation.bb1cfbc3b9b41c2297a0.mp3",
     "index.html": "/index.html",
-    "main.e70edab6.css.map": "/static/css/main.e70edab6.css.map",
-    "main.844f8719.js.map": "/static/js/main.844f8719.js.map",
+    "main.fad21cdc.css.map": "/static/css/main.fad21cdc.css.map",
+    "main.21453e6f.js.map": "/static/js/main.21453e6f.js.map",
     "787.861fdc3f.chunk.js.map": "/static/js/787.861fdc3f.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.e70edab6.css",
-    "static/js/main.844f8719.js"
+    "static/css/main.fad21cdc.css",
+    "static/js/main.21453e6f.js"
   ]
 }
