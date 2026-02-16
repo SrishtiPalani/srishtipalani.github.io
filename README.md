@@ -31,8 +31,3 @@ The site is built and deployed to the `gh-pages` branch with `npm run deploy`. T
 3. Under **Branch**, select `gh-pages` and `/ (root)`, then **Save**.
 
 After a minute or two, the site will be available at https://srishtipalani.github.io/.
-
-## Usage Instructions
-
-Open the project folder and Navigate to `/src/components/`. <br/>
-You will find all the components used and you can edit your information accordingly.
