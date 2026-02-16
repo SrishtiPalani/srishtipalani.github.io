@@ -2,17 +2,33 @@
     padding-bottom: 14px;
     font-family:'Open Sans', 'Helvetica Neue', sans-serif;
 }
-.about-top{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.about-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.about-top .ant-row {
+  align-items: center;
+}
+
+.about-photo {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .picture {
-  width:55%;
-  object-fit:cover;
-  border-radius:50%;
-  display: flex;
+  width: 100%;
+  max-width: 320px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+@media (max-width: 1199px) {
+  .picture {
+    max-width: 200px;
+  }
 }
 
 .speaker {
@@ -20,23 +36,236 @@
   background-color: white;
 }
 
-.about-info {
-    font-size: 20px;
-    
+.about-pronunciation-audio {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
+
+.about-info {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.about-greeting {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.about-name-line {
+  margin: 0 0 12px;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.about-pronunciation-wrap {
+  display: inline-block;
+  margin-left: 0.35em;
+  vertical-align: middle;
+}
+
+.about-pronunciation-btn {
+  vertical-align: middle;
+  padding: 0 2px;
+  min-width: auto;
+  line-height: 1;
+}
+
+.about-title {
+  font-size: 17px;
+  font-weight: 500;
+  margin: 0 0 18px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.about-title .about-org-link {
+  color: #0d9488;
+  text-decoration: none;
+}
+
+.about-title .about-org-link:hover {
+  color: #1890ff;
+}
+
+.about-links {
+  margin: 0;
+  padding-top: 2px;
+  font-size: 15px;
+}
+
+.about-links a {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.about-links a:hover {
+  color: #1890ff;
+}
+
+.about-links-sep {
+  margin: 0 6px;
+  color: #1890ff;
+  user-select: none;
+}
+
 .info-name {
-    color: #8860d0;
-    font-size: 20px;
-    font-family: 'Open Sans', 'Helvetica Neue', sans-serif; 
-    /* font-family: 'Patrick Hand SC', cursive; */
+  color: #0d9488;
+  font-size: 20px;
+  font-family: 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 a:hover {
     color: #1890ff;
-  }  
+  }
+
+/* Bio column inner – no extra layout */
+.about-bio-inner {
+  height: 100%;
+}
+
+/* Bio + News row: on desktop, row height = bio only; news is absolute so it matches and scrolls */
+@media (min-width: 1200px) {
+  .about-bio-news-row {
+    position: relative;
+  }
+  .about-bio-news-row .ant-col:first-child {
+    padding-right: calc(33.333% + 16px);
+  }
+  .about-bio-news-row .ant-col:last-child {
+    position: absolute;
+    right: 8px;
+    top: 0;
+    bottom: 0;
+    width: calc(33.333% - 8px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+/* News column inner – fill height, flex layout for scroll */
+.about-news-col-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* News & Upcoming Travel section – matches bio typography and site palette */
+.news-section {
+  margin-top: 0;
+  font-family: 'Open Sans', 'Helvetica Neue', sans-serif;
+  padding-left: 24px;
+  border-left: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+@media (max-width: 1199px) {
+  .news-section {
+    flex: none;
+    padding-left: 0;
+    border-left: none;
+    padding-top: 24px;
+    margin-top: 24px;
+    border-top: 1px solid #e8e8e8;
+  }
+}
+.news-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  padding-bottom: 0;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.news-title.info-name {
+  color: #0d9488;
+}
+.news-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+}
+/* Ensure scrollbar is visible when content overflows (desktop) */
+@media (min-width: 1200px) {
+  .news-list {
+    scrollbar-width: thin;
+  }
+  .news-list::-webkit-scrollbar {
+    width: 8px;
+  }
+  .news-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  .news-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  .news-list::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+  }
+}
+@media (max-width: 1199px) {
+  .news-list {
+    flex: none;
+    overflow-y: visible;
+  }
+}
+.news-item {
+  margin-bottom: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1a1a1a;
+}
+.news-date {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  color: #555;
+  margin-bottom: 6px;
+}
+.news-text {
+  display: block;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.news-bullets {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+.news-bullets li {
+  margin-bottom: 4px;
+}
+.news-bullets li:last-child {
+  margin-bottom: 0;
+}
+/* Match bio link styling – same blue, no underline */
+.news-text a {
+  color: #1890ff;
+  text-decoration: none;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.news-text a:hover {
+  color: #1890ff;
+}
 
 /* .card-link{
-    color: #8860d0;
+    color: #0d9488;
 } */
 
 /* @media only screen and (max-width: 720px) { */

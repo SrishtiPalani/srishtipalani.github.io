@@ -9,21 +9,6 @@ function Web() {
         </a>
     </div>
     <div className="web-option">
-        <a href="#research">
-        Research
-        </a>
-    </div>
-    <div className="web-option">
-        <a href="#teaching">
-        Teaching
-        </a>
-    </div>
-    <div className="web-option">
-        <a href="#dei">
-        Diversity & Inclusion
-        </a>
-    </div>
-    <div className="web-option">
         <a href={"https://drive.google.com/file/d/1i1kc3CJ2BbVsafk1OfBZur1Y80zehusO/view?usp=sharing"} target = "_blank" rel="noopener noreferrer">
         CV
         </a>
