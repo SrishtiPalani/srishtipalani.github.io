@@ -8,14 +8,6 @@ This project was built using these technologies.
 - VsCode
 - Vercel
 
-## Features
-
-** Multi-Page Layout**
-
-** Styled with React-Bootstrap and Css with easy to customize colors**
-
-** Fully Responsive**
-
 ## Getting Started
 
 Clone down this repository. You will need `node.js` and `git` installed globally on your machine.
@@ -44,7 +36,3 @@ After a minute or two, the site will be available at https://srishtipalani.githu
 
 Open the project folder and Navigate to `/src/components/`. <br/>
 You will find all the components used and you can edit your information accordingly.
-
-### Show your support
-
-Give a ⭐ if you like this website!
