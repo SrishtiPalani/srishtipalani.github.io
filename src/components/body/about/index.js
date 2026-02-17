@@ -102,13 +102,13 @@ function About() {
             <li className="news-item">
               <span className="news-date">04/2026</span>
               <span className="news-text">
-                Work with <a href="https://www.kenqgu.com/" target="_blank" rel="noreferrer">Ken Gu</a> (intern) and <a href="https://www.vidyasetlur.com/" target="_blank" rel="noreferrer">Vidya Setlur</a> published at <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a>: <i>“I Need to Find That One Chart”: How Data Workers Navigate, Make Sense of, and Communicate Analytical Conversations</i>. Congratulations, Ken! 🎉
+                Work with <a href="https://www.kenqgu.com/" target="_blank" rel="noreferrer">Ken Gu</a> (intern) and <a href="https://www.vidyasetlur.com/" target="_blank" rel="noreferrer">Vidya Setlur</a> published at <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a>: <i>“I Need to Find That One Chart”: How Data Workers Navigate, Make Sense of, and Communicate Analytical Conversations</i>. Congratulations, team! 🎉
               </span>
             </li>
             <li className="news-item">
               <span className="news-date">03/2026</span>
               <span className="news-text">
-                Work with <a href="https://minsukchang.info/" target="_blank" rel="noreferrer">Minsuk Chang</a>(intern) and <a href="https://arjun010.github.io/" target="_blank" rel="noreferrer">Arjun Srinivasan</a> published at <a href="https://iui.acm.org/2026/" target="_blank" rel="noreferrer">ACM IUI 2026</a>: <i>Criticality: Scaffolding Decision-Making with Interactive Critical Thinking and Evidence-Based Reasoning Traces</i>. Congratulations, Minsuk! 🎉
+                Work with <a href="https://minsukchang.info/" target="_blank" rel="noreferrer">Minsuk Chang</a> (intern) and <a href="https://arjun010.github.io/" target="_blank" rel="noreferrer">Arjun Srinivasan</a> published at <a href="https://iui.acm.org/2026/" target="_blank" rel="noreferrer">ACM IUI 2026</a>: <i>Criticality: Scaffolding Decision-Making with Interactive Critical Thinking and Evidence-Based Reasoning Traces</i>. Congratulations, team! 🎉
               </span>
             </li>
             <li className="news-item">
