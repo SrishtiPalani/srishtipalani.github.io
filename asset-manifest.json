@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/static/css/main.fad21cdc.css",
-    "main.js": "/static/js/main.e8ee64f3.js",
+    "main.js": "/static/js/main.8403f5db.js",
     "static/js/787.861fdc3f.chunk.js": "/static/js/787.861fdc3f.chunk.js",
     "static/media/SrishtiPalani.png": "/static/media/SrishtiPalani.52dc3419e8a52957fa4a.png",
     "static/media/SrishtiPalaniPronunciation.mp3": "/static/media/SrishtiPalaniPronunciation.bb1cfbc3b9b41c2297a0.mp3",
     "index.html": "/index.html",
     "main.fad21cdc.css.map": "/static/css/main.fad21cdc.css.map",
-    "main.e8ee64f3.js.map": "/static/js/main.e8ee64f3.js.map",
+    "main.8403f5db.js.map": "/static/js/main.8403f5db.js.map",
     "787.861fdc3f.chunk.js.map": "/static/js/787.861fdc3f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.fad21cdc.css",
-    "static/js/main.e8ee64f3.js"
+    "static/js/main.8403f5db.js"
   ]
 }
