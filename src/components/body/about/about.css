@@ -153,6 +153,22 @@ a:hover {
   min-height: 0;
   overflow: hidden;
   height: 100%;
+  position: relative;
+}
+
+/* Fade overlay at bottom of news list to hint at scrollable content (desktop only) */
+@media (min-width: 1200px) {
+  .about-news-col-inner::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 /* News & Upcoming Travel section – matches bio typography and site palette */
@@ -190,7 +206,7 @@ a:hover {
 }
 .news-list {
   list-style: none;
-  padding: 0;
+  padding: 0 0 48px 0;
   margin: 0;
   flex: 1;
   min-height: 0;
@@ -222,6 +238,7 @@ a:hover {
   .news-list {
     flex: none;
     overflow-y: visible;
+    padding-bottom: 0;
   }
 }
 .news-item {
