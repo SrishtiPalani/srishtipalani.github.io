@@ -6,6 +6,7 @@ import { Button, Tooltip, Row, Col, Divider } from 'antd';
 
 import namePronunciation from "../../../assets/SrishtiPalaniPronunciation.mp3";
 import Publications from "../publications/index";
+import Workshops from "../workshops/index";
 
 function About() {
   const audioRef = useRef(null);
@@ -66,9 +67,9 @@ function About() {
       <Col xs={24} xl={16}>
           <div className="about-bio-inner">
           <p style={{ fontSize: '15px'}}>
-          I research at the intersection of Human-Computer Interaction, Natural Language Processing and Cognitive Science. I study, build, and evaluate AI systems that augment human cognition while remaining interpretable, trustworthy, and aligned with human needs. My research connects the design of AI systems that support human cognition with empirical investigations of how these systems reshape people's workflows and practices.          <br /> <br />
+          I conduct research at the intersection of <strong className="info-name" style={{ fontSize: 'inherit' }}>Human-Computer Interaction, Natural Language Processing and Cognitive Science</strong>. I design and engineer AI-based algorithms and interaction mechanisms that augment human cognition and evaluate their impact, bridging system building with empirical studies of how these tools reshape people’s workflows and practices.<br /> <br />
           I received my PhD and Master's from <a href="https://ucsd.edu" target="_blank" rel="noreferrer">University of California, San Diego</a>, and graduated <i>summa cum laude</i> from <a href="https://www.mtholyoke.edu" target="_blank" rel="noreferrer">Mount Holyoke College, MA</a>.{' '}
-          I regularly publish my research at top-tier HCI and AI venues and conferences. Check out a full list of <a href="https://scholar.google.com/citations?user=VQV7AYUAAAAJ&hl=en" target="_blank" rel="noreferrer">publications here</a>. My work has been recognized with best paper awards and honors such as <a href="https://research.google/programs-and-events/phd-fellowship/recipients/?filtertab=2021" target="_blank" rel="noreferrer">Google PhD Research Fellowship</a>, Phi Beta Kappa Prize, and <a href="https://cra.org/about/awards/outstanding-undergraduate-researcher-award/#2018" target="_blank" rel="noreferrer"> CRA Outstanding Undergraduate Researcher Award</a>. I have collaborated with top research labs such as <a href="https://www.microsoft.com/en-us/research/" target="_blank" rel="noreferrer">Microsoft Research</a>, <a href="https://www.autodesk.com/research/overview" target="_blank" rel="noreferrer">Autodesk Research</a>, and the <a href="https://allenai.org/about" target="_blank" rel="noreferrer">Allen Institute for AI</a>. Beyond publications and patents, my work also directly informs product roadmaps; most recently, with features announced at the <a href="https://www.tableau.com/events/dreamforce-2025-keynote" target="_blank" rel="noreferrer">Tableau Keynote at Dreamforce 2025</a>.
+          I regularly publish my research at top-tier HCI and AI venues and conferences. Check out a full list of <a href="https://scholar.google.com/citations?user=VQV7AYUAAAAJ&hl=en" target="_blank" rel="noreferrer">publications here</a>. My work has been recognized with best paper awards and honors such as <a href="https://research.google/programs-and-events/phd-fellowship/recipients/?filtertab=2021" target="_blank" rel="noreferrer">Google PhD Research Fellowship</a> and <a href="https://cra.org/about/awards/outstanding-undergraduate-researcher-award/#2018" target="_blank" rel="noreferrer"> CRA Outstanding Undergraduate Researcher Award</a>. I have collaborated with top research labs such as <a href="https://www.microsoft.com/en-us/research/" target="_blank" rel="noreferrer">Microsoft Research</a>, <a href="https://www.autodesk.com/research/overview" target="_blank" rel="noreferrer">Autodesk Research</a>, and the <a href="https://allenai.org/about" target="_blank" rel="noreferrer">Allen Institute for AI</a>. Beyond publications and patents, my work also directly informs product roadmaps; most recently, with features announced at the <a href="https://www.tableau.com/events/dreamforce-2025-keynote" target="_blank" rel="noreferrer">Tableau Keynote at Dreamforce 2025</a>.
           <br /><br />
           I'm always interested in discussing research collaborations or potential projects. The best way to reach me is by emailing srishti [dot] palani [at] salesforce [dot] com.
           </p>
@@ -93,7 +94,7 @@ function About() {
             <li className="news-item">
               <span className="news-date">04/2026</span>
               <span className="news-text">
-                Work with <a href="https://www.kenqgu.com/" target="_blank" rel="noreferrer">Ken Gu</a> (intern) and <a href="https://www.vidyasetlur.com/" target="_blank" rel="noreferrer">Vidya Setlur</a> published at <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a>: <a href="https://www.tableau.com/research/publications/syncsense" target="_blank" rel="noreferrer"><i>&#8220;I Need to Find That One Chart&#8221;: How Data Workers Navigate, Make Sense of, and Communicate Analytical Conversations</i></a>. Congratulations, team! &#127881;
+                &#127942; Work with <a href="https://www.kenqgu.com/" target="_blank" rel="noreferrer">Ken Gu</a> (intern) and <a href="https://www.vidyasetlur.com/" target="_blank" rel="noreferrer">Vidya Setlur</a> published at <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a>: <a href="https://www.tableau.com/research/publications/syncsense" target="_blank" rel="noreferrer"><i>&#8220;I Need to Find That One Chart&#8221;: How Data Workers Navigate, Make Sense of, and Communicate Analytical Conversations</i></a> and won the <strong className="news-award">Best Paper (Honorable Mention) Award!</strong> Congratulations, team! &#127881;
               </span>
             </li>
             <li className="news-item">
@@ -117,6 +118,10 @@ function About() {
     <Divider />
 
     <Publications />
+
+    <Divider />
+
+    <Workshops />
 
     <Divider />
   </div>

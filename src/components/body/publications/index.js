@@ -41,6 +41,7 @@ const publications = [
   {
     id: "syncsense",
     title: "SyncSense",
+    award: "🏆 Best Paper Honorable Mention Award",
     description:
       "How data workers navigate, make sense of, and communicate analytical conversations",
     venue: "ACM CHI",
@@ -117,6 +118,7 @@ function Publications() {
               <p className="pub-card-venue">
                 <a href={pub.venueUrl} target="_blank" rel="noreferrer" className="pub-card-venue-link">{pub.venue} {pub.year}</a>
               </p>
+              {pub.award && <p className="pub-card-award">{pub.award}</p>}
               <div className="pub-card-links">
                 {pub.links.map((link) => (
                   <a

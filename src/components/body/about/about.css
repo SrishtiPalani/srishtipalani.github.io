@@ -280,6 +280,9 @@ a:hover {
 .news-text a:hover {
   color: #1890ff;
 }
+.news-award {
+  color: #b45309;
+}
 
 /* .card-link{
     color: #0d9488;
