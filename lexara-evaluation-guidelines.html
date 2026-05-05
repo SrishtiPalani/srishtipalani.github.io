@@ -201,7 +201,7 @@
     });
     const PIE = (data, theta, color) => ({
       $schema:SCHEMA, data:{values:data}, mark:{type:"arc",innerRadius:0},
-      encoding:{theta:{field:theta,type:"quantitative"}, color:{field:color,type:"nominal",legend:{labelFontSize:8,titleFontSize:8}}}
+      encoding:{theta:{field:theta,type:"quantitative"}, color:{field:color,type:"nominal",legend:{orient:"right",labelFontSize:7,titleFontSize:7,symbolSize:40,offset:4,padding:0,columns:1,rowPadding:1}}}
     });
 
     const REPS_REVENUE = [
@@ -1416,10 +1416,14 @@
       const ref = useRef(null);
       useEffect(() => {
         if (!ref.current || !spec || !window.vegaEmbed) return;
-        const finalSpec = {...spec, width, height, padding: 4, background: "transparent"};
+        // autosize:fit + contains:padding tells Vega-Lite to shrink the whole
+        // chart (axes, titles, legends, marks) to fit within width/height —
+        // otherwise width/height refer only to the inner plot area and the
+        // surrounding chrome can overflow the card.
+        const finalSpec = {...spec, width, height, padding: 4, background: "transparent", autosize: {type:"fit", contains:"padding", resize:true}};
         window.vegaEmbed(ref.current, finalSpec, {actions:false, renderer:"svg"}).catch(e => console.warn("vega-embed failed", e));
       }, [spec, width, height]);
-      return <div ref={ref} style={{width, height, display:"flex", alignItems:"center", justifyContent:"center"}}/>;
+      return <div ref={ref} style={{width, height, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center"}}/>;
     }
 
     function scoreColor(s) {
