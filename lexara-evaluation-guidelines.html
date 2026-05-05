@@ -3,31 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lexara Deck 52 v4</title>
+  <title>Lexara Deck v5</title>
   <style>
     html, body { margin: 0; padding: 0; background: #fafafa; }
     body { font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif; padding: 24px 0; }
+    .vega-embed details, .vega-embed summary { display: none !important; }
+    .vega-embed { padding: 0 !important; }
+    .metric-scroll::-webkit-scrollbar { width: 4px; }
+    .metric-scroll::-webkit-scrollbar-track { background: transparent; }
+    .metric-scroll::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+    .metric-scroll::-webkit-scrollbar-thumb:hover { background: #bbb; }
   </style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel" data-presets="react" data-type="module">
-    const { useState } = React;
+    const { useState, useEffect, useRef } = React;
 
     const CATS = {
-      data:          { label: "Data",                bg: "#032D60", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
-      chartType:     { label: "Chart type",          bg: "#1896FF", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
-      functionality: { label: "Functionality",       bg: "#AD7BEE", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
-      design:        { label: "Design",              bg: "#04E1CB", fg: "#032D60", fgMuted: "rgba(3,45,96,0.5)" },
-      factual:       { label: "Factual grounding",   bg: "#FF784F", fg: "#fff",    fgMuted: "rgba(255,255,255,0.65)" },
+      data:          { label: "Data",                 bg: "#032D60", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
+      chartType:     { label: "Chart type",           bg: "#1896FF", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
+      functionality: { label: "Functionality",        bg: "#AD7BEE", fg: "#fff",    fgMuted: "rgba(255,255,255,0.6)" },
+      design:        { label: "Design",               bg: "#04E1CB", fg: "#032D60", fgMuted: "rgba(3,45,96,0.5)" },
+      factual:       { label: "Factual grounding",    bg: "#FF784F", fg: "#fff",    fgMuted: "rgba(255,255,255,0.65)" },
       analytical:    { label: "Analytical thinking",  bg: "#FCC003", fg: "#032D60", fgMuted: "rgba(3,45,96,0.5)" },
       conversation:  { label: "Conversation quality", bg: "#FF538A", fg: "#fff",    fgMuted: "rgba(255,255,255,0.65)" },
     };
     const RESP = { viz: "Visualization response quality", nl: "Analytical language response quality", conv: "Conversation quality" };
     const DOMAINS = { sales:"Sales", marketing:"Marketing", cs:"Customer service", edu:"Education", lifesci:"Life sciences", finance:"Financial services", retail:"Retail", health:"Healthcare" };
+    const TIER_META = {
+      correct:   { label: "CORRECT",           color: "#04E1CB", tc: "#032D60", icon: "✓" },
+      partial:   { label: "PARTIALLY CORRECT", color: "#FCC003", tc: "#5A4500", icon: "~" },
+      incorrect: { label: "INCORRECT",         color: "#FF538A", tc: "#6B1A32", icon: "✗" },
+    };
 
     const iconStyle = { position:"absolute",top:6,right:6,width:68,height:68,opacity:0.12 };
     const catIcons = {
@@ -40,32 +54,1522 @@
       conversation:(<svg viewBox="0 0 80 80" style={iconStyle}><rect x="6" y="8" width="36" height="22" rx="6" fill="currentColor" opacity="0.5"/><path d="M14 30v7l7-7" fill="currentColor" opacity="0.5"/><line x1="12" y1="16" x2="36" y2="16" stroke="currentColor" strokeWidth="2" opacity="0.3" strokeLinecap="round"/><line x1="12" y1="22" x2="30" y2="22" stroke="currentColor" strokeWidth="2" opacity="0.3" strokeLinecap="round"/><circle cx="40" cy="42" r="6" fill="none" stroke="currentColor" strokeWidth="2"/><circle cx="40" cy="42" r="2" fill="currentColor"/><line x1="40" y1="36" x2="40" y2="30" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="40" y1="48" x2="40" y2="52" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><rect x="38" y="52" width="36" height="22" rx="6" fill="currentColor" opacity="0.5"/><path d="M66 74v7l-7-7" fill="currentColor" opacity="0.5"/></svg>),
     };
 
-    const criteria=[{id:"V1",cat:"data",rt:"viz",title:"Verify data fidelity",desc:"Check whether the AI faithfully represents the underlying data — right rows, columns, and aggregation.",auditQ:"Did the AI hallucinate data, drop rows, or apply the wrong aggregation?",spectrum:["Exact data, correct aggregation, all rows","Wrong aggregation, minor rounding, subset of columns","Missing rows, fabricated values, hallucinated numbers"],examples:[{domain:"sales",product:"Tableau Agent",utterance:"\"Total revenue by sales rep this quarter\"",correct:"Sum of Revenue for Q3 by Rep. Top rep = $420K. All 12 reps shown, correct aggregation.",partial:"Count of Opportunities instead of Sum of Revenue. Shows 12 reps but values are deal counts, not dollars.",incorrect:"Shows only 8 of 12 reps — 4 with zero revenue silently filtered out."},{domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Average readmission rate by department\"",correct:"Mean readmission rate: Cardiology = 12.3%, Oncology = 8.1%. All departments.",partial:"Median instead of mean. Same departments, different central tendency.",incorrect:"Readmission counts instead of rates. High-volume depts look worse."},{domain:"retail",product:"CRM Analytics",utterance:"\"Total units sold by product category\"",correct:"Sum of Units: Electronics = 4,200, Apparel = 3,800. All categories.",partial:"Order Lines instead of Units. Multi-unit orders counted as 1.",incorrect:"Shows revenue instead of units. Electronics highest due to price."},{domain:"edu",product:"Tableau Concierge",utterance:"\"Total enrollment by program this semester\"",correct:"Headcount: CS = 342, Business = 289. Current semester only.",partial:"Credit hours instead of headcount. Part-timers skew rankings.",incorrect:"Historical cumulative, not current semester. Numbers 5x too high."}]},{id:"V2",cat:"data",rt:"viz",title:"Check field similarity",desc:"Verify the fields bound to visual elements match your analytical intent, even when names differ.",auditQ:"Did the AI pick the right field — or a close-sounding but semantically wrong one?",spectrum:["Exact or semantically identical field with matching type","Related field, compatible type, plausible inference","Unrelated field, wrong type, or missing axis"],examples:[{domain:"marketing",product:"Tableau Agent",utterance:"\"Show me campaign ROI over time\"",correct:"Maps ROI to (Revenue − Cost) / Cost. Time = Campaign Launch Date.",partial:"Maps ROI to Revenue only — ignores cost component entirely.",incorrect:"Maps ROI to Click-Through Rate. Different metric altogether."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Show efficacy by treatment arm\"",correct:"Maps to Primary Endpoint Response Rate. Arms from Trial Arm field.",partial:"Maps to Overall Survival — related outcome, different measure.",incorrect:"Maps to Enrollment Count. Large arms look more 'effective'."},{domain:"finance",product:"CRM Analytics",utterance:"\"Show portfolio returns by sector\"",correct:"Maps to Time-Weighted Return. Sector from GICS classification.",partial:"Maps to Absolute Gain instead of %. Misleading for comparison.",incorrect:"Maps to AUM. Larger sectors appear to 'perform' better."},{domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"Show resolution time by support tier\"",correct:"Maps to Avg Time to Resolution (hours). Tier from Priority.",partial:"Maps to First Response Time — faster, not full resolution.",incorrect:"Maps to Case Count. High-volume tiers look 'slower'."}]},{id:"V3",cat:"chartType",rt:"viz",title:"Validate chart type",desc:"Confirm the chart type is appropriate for your data fields and analytical intent.",auditQ:"Would Show Me recommend this chart? Is there a better mark type for this data?",spectrum:["Top Show Me recommendation for these fields","Valid alternative, plausible but less optimal","Poor choice for the data or analytical task"],examples:[{domain:"sales",product:"Tableau Agent",utterance:"\"Show pipeline trend over 12 months\"",correct:"Line chart — correct for continuous time series.",partial:"Area chart — shows trend but filled area obscures magnitudes.",incorrect:"Pie chart with 12 slices. Can't compare months or see trend."},{domain:"edu",product:"Tableau Concierge",utterance:"\"Compare graduation rates across departments\"",correct:"Bar chart — correct for categorical comparison.",partial:"Dot plot — valid but less familiar to most audiences.",incorrect:"Line chart connecting departments. Implies false continuity."},{domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Relationship between wait time and satisfaction\"",correct:"Scatter plot — correct for two continuous measures.",partial:"Dual-axis bar — shows both but obscures correlation.",incorrect:"Stacked bar. Cannot show relationship at all."},{domain:"retail",product:"CRM Analytics",utterance:"\"Show distribution of order values\"",correct:"Histogram — correct for continuous distribution.",partial:"Box plot — valid summary but loses shape detail.",incorrect:"Bar per order ID. No distribution insight, just noise."}]},{id:"V4",cat:"functionality",rt:"viz",title:"Inspect axis accuracy",desc:"Check that X/Y axes use the intended fields with correct orientation, scale, and zero baselines.",auditQ:"Are the axes correct? Does the y-axis start at zero? Are X and Y swapped?",spectrum:["Correct fields, orientation, zero baseline, units","Swapped axes, or non-zero baseline exaggerating gaps","Wrong fields, incorrect scale type, or missing axis"],examples:[{domain:"finance",product:"Tableau Agent",utterance:"\"Quarterly returns by fund\"",correct:"Fund on x, Return % on y at 0%. Units labeled.",partial:"Y starts at 8% — 9% vs 10% looks like a 2x difference.",incorrect:"Axes reversed. Return on x, Fund on y. Disorienting."},{domain:"marketing",product:"Tableau Pulse Q&A",utterance:"\"Email open rates by campaign\"",correct:"Campaign on x, Open Rate % on y at 0. Clear labels.",partial:"Y starts at 15%. Small differences look dramatic.",incorrect:"Campaigns on y alphabetically, no units on Open Rate."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Adverse event frequency by severity\"",correct:"Severity on x (Mild→Severe), Count on y at 0.",partial:"Axes swapped — valid but horizontal bars unexpected.",incorrect:"Severity on continuous scale (1-5), not ordinal."},{domain:"cs",product:"Tableau Concierge",utterance:"\"CSAT scores by agent\"",correct:"Agent on x, CSAT (1-5) on y at 0. Units shown.",partial:"Y starts at 3.5 — agents look identical or wildly different.",incorrect:"Agent ID on continuous x. Gaps distort spacing."}]},{id:"V5",cat:"functionality",rt:"viz",title:"Audit filter accuracy",desc:"Verify exactly the right filters are applied — nothing silently added, nothing silently dropped.",auditQ:"Are there phantom filters added or expected filters missing?",spectrum:["Exact filter match, including semantic equivalents","Extra unrequested filter, or carryover from prior turn","Missing filter, wrong value, or filter on wrong field"],examples:[{domain:"sales",product:"Tableau Agent",utterance:"\"Closed-won deals in Q4\"",correct:"Stage = Closed Won AND Close Date in Q4. No extras.",partial:"Adds Owner = you silently. Only your deals, not team.",incorrect:"No date filter. Closed Won across all quarters."},{domain:"retail",product:"CRM Analytics",utterance:"\"Returns for electronics this month\"",correct:"Category = Electronics AND Date = March 2026.",partial:"Also filters Store = Flagship. Misses 14 locations.",incorrect:"No date filter. Shows 3 years, not this month."},{domain:"edu",product:"Tableau Pulse Q&A",utterance:"\"Enrollment for graduate programs\"",correct:"Level = Graduate. All graduate programs shown.",partial:"Graduate AND Dept = Engineering from prior question.",incorrect:"No level filter. Undergrad + graduate combined."},{domain:"health",product:"Tableau Concierge",utterance:"\"ICU admissions, patients over 65\"",correct:"Unit = ICU AND Age > 65. All matching shown.",partial:"Adds Diagnosis = Cardiac silently. Only cardiac ICU.",incorrect:"Age filter missing. All ICU admissions shown."}]},{id:"V6",cat:"functionality",rt:"viz",title:"Confirm sort order",desc:"Ensure sort fields and directions match your request or can be reasonably inferred from context.",auditQ:"Is the data sorted the way I asked — especially for \"top N\" queries?",spectrum:["Correct field and direction, or semantically equivalent","Right field, wrong direction, or direction ambiguous","No sort when clearly expected, or sort on wrong field"],examples:[{domain:"marketing",product:"Tableau Agent",utterance:"\"Top 5 campaigns by conversion rate\"",correct:"5 campaigns descending by Conversion. Highest first.",partial:"Ascending — shows lowest 5, not top 5.",incorrect:"Alphabetical. No sort on conversion at all."},{domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"Worst agents by CSAT\"",correct:"Ascending by CSAT — lowest first. Matches 'worst'.",partial:"Descending — best agents shown. Direction inverted.",incorrect:"Alphabetical by name. CSAT not used as key."},{domain:"finance",product:"CRM Analytics",utterance:"\"Bottom 10 accounts by revenue growth\"",correct:"Ascending by Growth %. Negative growth first.",partial:"Descending — top growers, not bottom.",incorrect:"By Account Name. Growth not factored in."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Rank sites by enrollment speed\"",correct:"Descending by Patients/Month. Fastest first.",partial:"By total enrollment, not rate. Large slow sites rank high.",incorrect:"Site-ID order. No ranking despite 'rank' in request."}]},{id:"V7",cat:"design",rt:"viz",title:"Evaluate visual encodings",desc:"Check that color, size, shape, and labels map data to visual channels truthfully and appropriately.",auditQ:"Is each encoding type appropriate for the data type? Categorical palette for nominal?",spectrum:["Correct field + appropriate encoding type","Right field, wrong palette or extra encoding","Missing encoding, meaningless channel, or mismatch"],examples:[{domain:"retail",product:"Tableau Agent",utterance:"\"Sales by region colored by category\"",correct:"Color → Category (nominal), distinct hues. Distinguishable.",partial:"Color → Category using sequential gradient. False ordering.",incorrect:"Color → Row ID. Every bar different, no meaning."},{domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Readmissions by hospital, sized by volume\"",correct:"Size → Volume (quantitative), proportional. Color → Hospital.",partial:"Size → Hospital Name. Different sizes, meaningless.",incorrect:"No size encoding despite request."},{domain:"sales",product:"CRM Analytics",utterance:"\"Pipeline by stage, colored by probability\"",correct:"Color → Probability, sequential gradient. Higher = darker.",partial:"Color → Probability, categorical hues. 20/50/80% unrelated.",incorrect:"Color → Owner. Ignores probability entirely."},{domain:"edu",product:"Tableau Concierge",utterance:"\"GPA vs SAT, shaped by program\"",correct:"Shape → Program (nominal), distinct marks. ≤6 programs.",partial:"15 programs — too many shapes, indistinguishable.",incorrect:"No shape. All circles. Program distinction lost."}]},{id:"V8",cat:"design",rt:"viz",title:"Test interactivity",desc:"Verify that tooltips, selections, and drill-downs show accurate, relevant data on demand.",auditQ:"When I hover, does the tooltip show correct values with the right aggregation?",spectrum:["All fields correct, formatted, consistent","Partial coverage, wrong aggregation, or duplicates","No tooltip, wrong values, or contradicts chart"],examples:[{domain:"cs",product:"Tableau Agent",utterance:"Hover over \"Cases by Category\"",correct:"Category: Billing, Cases: 847, Avg Res: 4.2 hrs. Matches.",partial:"Count correct but resolution shows Sum, not Average.",incorrect:"Shows Opportunity Amount — wrong datasource."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"Hover over \"Dose Response Curve\"",correct:"Dose: 50mg, Response: 62%, n=84, CI: 51-73%.",partial:"Dose and Response but missing sample size and CI.",incorrect:"No tooltip. Data points unidentifiable."},{domain:"finance",product:"CRM Analytics",utterance:"Hover over portfolio allocation",correct:"Tech, 28.3%, $4.2M, Benchmark: 25.1%. All correct.",partial:"Sector and % but value = Count of Holdings, not $.",incorrect:"Previous quarter data. Stale, contradicts chart."},{domain:"marketing",product:"Tableau Pulse Q&A",utterance:"Hover over \"Funnel by Stage\"",correct:"MQL, Count: 1,240, Conversion: 34%. Matches.",partial:"Stage and Count but conversion rate missing.",incorrect:"'Sum of MQL' shown on SQL stage. Labels wrong."}]},{id:"L1",cat:"factual",rt:"nl",title:"Confirm factual grounding",desc:"Ensure the text explanation matches the visualization — same facts, direction, and magnitudes.",auditQ:"If I read only the text, would I draw the same conclusions as from the chart?",spectrum:["Measures, magnitudes, directions all match","Aligned but missing specifics or vague","Contradicts chart, wrong measure, or fabricated"],examples:[{domain:"sales",product:"Tableau Agent",utterance:"\"How did Q4 pipeline perform?\"",correct:"\"Grew 18% to $12.3M, Enterprise +32%.\" Matches chart.",partial:"\"Healthy growth in Q4.\" No magnitudes.",incorrect:"\"Declined slightly.\" Contradicts visible growth."},{domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Summarize ER wait trends\"",correct:"\"Rose from 42 to 67 min, +60%.\" Matches line chart.",partial:"\"Waits increasing this year.\" No figures.",incorrect:"\"Remained stable.\" Contradicts upward trend."},{domain:"edu",product:"Tableau Concierge",utterance:"\"How are dropout rates trending?\"",correct:"\"Fell 8.2% to 5.1% over 3 years, −38%.\" Matches.",partial:"\"Improved recently.\" Vague, no magnitude.",incorrect:"\"At all-time high.\" Contradicts declining trend."},{domain:"retail",product:"CRM Analytics",utterance:"\"What happened to basket size?\"",correct:"\"Dropped $47 to $41 in Q3, −13%. Electronics drove it.\"",partial:"\"Dipped slightly.\" 13% is not slight.",incorrect:"\"New peak in Q3.\" Text says up, chart says down."}]},{id:"L2",cat:"analytical",rt:"nl",title:"Demand assumption disclosure",desc:"Look for the AI to surface filters, timeframes, aggregation choices, and field mappings it applied.",auditQ:"Did the AI tell me what it assumed — or silently make choices I can't verify?",spectrum:["States filters, timeframes, aggregation, mappings","Some assumptions noted but key ones missing","No disclosure — zero transparency"],examples:[{domain:"marketing",product:"Tableau Agent",utterance:"\"Show campaign performance\"",correct:"\"Active, Q1 2026, by conversion, excluding tests.\"",partial:"\"Filtered to Q1.\" Omits test exclusion.",incorrect:"\"Here is performance.\" Nothing stated."},{domain:"finance",product:"CRM Analytics",utterance:"\"Compare fund performance\"",correct:"\"12-mo TWR, net of fees, vs S&P 500, March 2026.\"",partial:"\"12-month returns.\" Omits fees and benchmark.",incorrect:"\"Here are comparisons.\" No methodology."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Show treatment outcomes\"",correct:"\"ITT, primary endpoint Wk 12, excl. screen failures.\"",partial:"\"Week 12 results.\" Omits analysis population.",incorrect:"\"Here are outcomes.\" No details at all."},{domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"How is support performing?\"",correct:"\"Avg resolution (hrs), Tier 1-3, excl. auto-closed, 30d.\"",partial:"\"Last 30 days.\" Omits exclusion criteria.",incorrect:"\"Here is performance.\" No metric or window."}]},{id:"L3",cat:"analytical",rt:"nl",title:"Seek meaningful insights",desc:"Evaluate whether the AI surfaces trends, anomalies, and actionable implications beyond restating your query.",auditQ:"Did it tell me something I didn't know — or just echo my request?",spectrum:["Trends + anomalies + causes + actions","Basic observation, no explanation or action","Echoes query, no analytical value"],examples:[{domain:"retail",product:"Tableau Agent",utterance:"\"What's happening with returns?\"",correct:"\"Electronics +40% in March — new laptop. Investigate quality.\"",partial:"\"Electronics returns higher.\" No cause or action.",incorrect:"\"Here is a breakdown.\" Restates request."},{domain:"edu",product:"Tableau Concierge",utterance:"\"Why is enrollment down?\"",correct:"\"Online −22%, in-person +8% — pandemic shift. Aid apps −15%.\"",partial:"\"Down 12% vs last year.\" No explanation.",incorrect:"\"Here are the numbers.\" Ignores the 'why'."},{domain:"sales",product:"CRM Analytics",utterance:"\"How is the West doing?\"",correct:"\"−15% quota but 42% close rate. Bottleneck is volume, not conversion.\"",partial:"\"Below quota.\" No root cause.",incorrect:"\"Here is West performance.\" Echoes request."},{domain:"health",product:"Tableau Pulse Q&A",utterance:"\"What's happening with readmissions?\"",correct:"\"Cardiology 11→16% in Q3, heart failure. July protocol change.\"",partial:"\"Increased in Q3.\" No dept or cause.",incorrect:"\"Here are rates.\" No analysis."}]},{id:"C1",cat:"conversation",rt:"conv",title:"Check coherence",desc:"Evaluate whether the response is internally consistent, logically structured, and free from contradictions.",auditQ:"Does each sentence follow logically — or does it contradict itself?",spectrum:["Clear logical chain, cause-and-effect, consistent","Mostly coherent, minor gaps or non-sequiturs","Self-contradictory, broken logic"],examples:[{domain:"cs",product:"Tableau Agent",utterance:"\"Why did CSAT drop in March?\"",correct:"\"Fell to 3.2 as resolution rose 40%. CRM migration caused delays.\"",partial:"\"CSAT dropped. Resolution up. Hired agents.\" No connection.",incorrect:"\"CSAT improved, so invest to fix decline.\" Contradicts itself."},{domain:"finance",product:"CRM Analytics",utterance:"\"Explain portfolio performance\"",correct:"\"Tech at 35% drove 4.2% gain. But overweight = concentration risk.\"",partial:"\"Tech good. Bonds down. Positive overall.\" Disconnected.",incorrect:"\"Returns strong so risk low, leverage up.\" Returns ≠ low risk."},{domain:"marketing",product:"Tableau Pulse Q&A",utterance:"\"What happened to email engagement?\"",correct:"\"Opens −12% after list +30% — diluted quality. Clicks held.\"",partial:"\"Opens fell. Clicks stable. List grew.\" No causal link.",incorrect:"\"Engagement up, but address sharp decline.\" Contradicts."},{domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Summarize the safety profile\"",correct:"\"Grade 3+ AEs: 18% high vs 7% low dose, dose-dependent. No new signals.\"",partial:"\"AEs higher high-dose. Well-tolerated. No concerns.\" Contradicts.",incorrect:"\"Safety excellent, increase dose to improve.\" If excellent, why?"}]},{id:"C2",cat:"conversation",rt:"conv",title:"Test follow-up relevance",desc:"In multi-turn analysis, verify the AI retains context — filters, categories, goals — across turns.",auditQ:"Did earlier filters and context carry forward, or did it start from scratch?",spectrum:["All prior context preserved, adapts to intent","Some context kept, key filters dropped","Context lost, resets, re-specify everything"],examples:[{domain:"health",product:"Tableau Agent",utterance:"T1: \"ICU by month\" → T2: \"By diagnosis\"",correct:"Diagnosis within ICU monthly. Both preserved.",partial:"Diagnosis shown but monthly axis dropped.",incorrect:"All admissions by diagnosis. ICU + monthly lost."},{domain:"sales",product:"CRM Analytics",utterance:"T1: \"Enterprise pipeline\" → T2: \"Compare to last Q\"",correct:"Enterprise current vs last Q. Segment preserved.",partial:"Compares quarters but Enterprise dropped.",incorrect:"Current Q, all segments. Both gone."},{domain:"retail",product:"Tableau Pulse Q&A",utterance:"T1: \"Online, Northeast\" → T2: \"Categories growing?\"",correct:"Growth within Online + Northeast. Both retained.",partial:"Online growth but Northeast dropped.",incorrect:"All-channel, all-region. Turn 1 ignored."},{domain:"edu",product:"Tableau Concierge",utterance:"T1: \"STEM enrollment\" → T2: \"Gender breakdown\"",correct:"Gender within STEM. Filter preserved.",partial:"Gender all programs. STEM dropped.",incorrect:"University demographics. All context lost."}]}];
+    const criteria=[
+      {id:"V1",cat:"data",rt:"viz",title:"Verify data fidelity",desc:"Check whether the AI faithfully represents the underlying data — right rows, columns, and aggregation.",auditQ:"Did the AI hallucinate data, drop rows, or apply the wrong aggregation?",spectrum:["Exact data, correct aggregation, all rows","Wrong aggregation, minor rounding, subset of columns","Missing rows, fabricated values, hallucinated numbers"],examples:[
+        {domain:"sales",product:"Tableau Agent",utterance:"\"Total revenue by sales rep this quarter\"",correct:"Sum of Revenue for Q3 by Rep. Top rep = $420K. All 12 reps shown, correct aggregation.",partial:"Count of Opportunities instead of Sum of Revenue. Shows 12 reps but values are deal counts, not dollars.",incorrect:"Shows only 8 of 12 reps — 4 with zero revenue silently filtered out."},
+        {domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Average readmission rate by department\"",correct:"Mean readmission rate: Cardiology = 12.3%, Oncology = 8.1%. All departments.",partial:"Median instead of mean. Same departments, different central tendency.",incorrect:"Readmission counts instead of rates. High-volume depts look worse."},
+        {domain:"retail",product:"CRM Analytics",utterance:"\"Total units sold by product category\"",correct:"Sum of Units: Electronics = 4,200, Apparel = 3,800. All categories.",partial:"Order Lines instead of Units. Multi-unit orders counted as 1.",incorrect:"Shows revenue instead of units. Electronics highest due to price."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"\"Total enrollment by program this semester\"",correct:"Headcount: CS = 342, Business = 289. Current semester only.",partial:"Credit hours instead of headcount. Part-timers skew rankings.",incorrect:"Historical cumulative, not current semester. Numbers 5x too high."}
+      ]},
+      {id:"V2",cat:"data",rt:"viz",title:"Check field similarity",desc:"Verify the fields bound to visual elements match your analytical intent, even when names differ.",auditQ:"Did the AI pick the right field — or a close-sounding but semantically wrong one?",spectrum:["Exact or semantically identical field with matching type","Related field, compatible type, plausible inference","Unrelated field, wrong type, or missing axis"],examples:[
+        {domain:"marketing",product:"Tableau Agent",utterance:"\"Show me campaign ROI over time\"",correct:"Maps ROI to (Revenue − Cost) / Cost. Time = Campaign Launch Date.",partial:"Maps ROI to Revenue only — ignores cost component entirely.",incorrect:"Maps ROI to Click-Through Rate. Different metric altogether."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Show efficacy by treatment arm\"",correct:"Maps to Primary Endpoint Response Rate. Arms from Trial Arm field.",partial:"Maps to Overall Survival — related outcome, different measure.",incorrect:"Maps to Enrollment Count. Large arms look more 'effective'."},
+        {domain:"finance",product:"CRM Analytics",utterance:"\"Show portfolio returns by sector\"",correct:"Maps to Time-Weighted Return. Sector from GICS classification.",partial:"Maps to Absolute Gain instead of %. Misleading for comparison.",incorrect:"Maps to AUM. Larger sectors appear to 'perform' better."},
+        {domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"Show resolution time by support tier\"",correct:"Maps to Avg Time to Resolution (hours). Tier from Priority.",partial:"Maps to First Response Time — faster, not full resolution.",incorrect:"Maps to Case Count. High-volume tiers look 'slower'."}
+      ]},
+      {id:"V3",cat:"chartType",rt:"viz",title:"Validate chart type",desc:"Confirm the chart type is appropriate for your data fields and analytical intent.",auditQ:"Would Show Me recommend this chart? Is there a better mark type for this data?",spectrum:["Top Show Me recommendation for these fields","Valid alternative, plausible but less optimal","Poor choice for the data or analytical task"],examples:[
+        {domain:"sales",product:"Tableau Agent",utterance:"\"Show pipeline trend over 12 months\"",correct:"Line chart — correct for continuous time series.",partial:"Area chart — shows trend but filled area obscures magnitudes.",incorrect:"Pie chart with 12 slices. Can't compare months or see trend."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"\"Compare graduation rates across departments\"",correct:"Bar chart — correct for categorical comparison.",partial:"Dot plot — valid but less familiar to most audiences.",incorrect:"Line chart connecting departments. Implies false continuity."},
+        {domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Relationship between wait time and satisfaction\"",correct:"Scatter plot — correct for two continuous measures.",partial:"Dual-axis bar — shows both but obscures correlation.",incorrect:"Stacked bar. Cannot show relationship at all."},
+        {domain:"retail",product:"CRM Analytics",utterance:"\"Show distribution of order values\"",correct:"Histogram — correct for continuous distribution.",partial:"Box plot — valid summary but loses shape detail.",incorrect:"Bar per order ID. No distribution insight, just noise."}
+      ]},
+      {id:"V4",cat:"functionality",rt:"viz",title:"Inspect axis accuracy",desc:"Check that X/Y axes use the intended fields with correct orientation, scale, and zero baselines.",auditQ:"Are the axes correct? Does the y-axis start at zero? Are X and Y swapped?",spectrum:["Correct fields, orientation, zero baseline, units","Swapped axes, or non-zero baseline exaggerating gaps","Wrong fields, incorrect scale type, or missing axis"],examples:[
+        {domain:"finance",product:"Tableau Agent",utterance:"\"Quarterly returns by fund\"",correct:"Fund on x, Return % on y at 0%. Units labeled.",partial:"Y starts at 8% — 9% vs 10% looks like a 2x difference.",incorrect:"Axes reversed. Return on x, Fund on y. Disorienting."},
+        {domain:"marketing",product:"Tableau Pulse Q&A",utterance:"\"Email open rates by campaign\"",correct:"Campaign on x, Open Rate % on y at 0. Clear labels.",partial:"Y starts at 15%. Small differences look dramatic.",incorrect:"Campaigns on y alphabetically, no units on Open Rate."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Adverse event frequency by severity\"",correct:"Severity on x (Mild→Severe), Count on y at 0.",partial:"Axes swapped — valid but horizontal bars unexpected.",incorrect:"Severity on continuous scale (1-5), not ordinal."},
+        {domain:"cs",product:"Tableau Concierge",utterance:"\"CSAT scores by agent\"",correct:"Agent on x, CSAT (1-5) on y at 0. Units shown.",partial:"Y starts at 3.5 — agents look identical or wildly different.",incorrect:"Agent ID on continuous x. Gaps distort spacing."}
+      ]},
+      {id:"V5",cat:"functionality",rt:"viz",title:"Audit filter accuracy",desc:"Verify exactly the right filters are applied — nothing silently added, nothing silently dropped.",auditQ:"Are there phantom filters added or expected filters missing?",spectrum:["Exact filter match, including semantic equivalents","Extra unrequested filter, or carryover from prior turn","Missing filter, wrong value, or filter on wrong field"],examples:[
+        {domain:"sales",product:"Tableau Agent",utterance:"\"Closed-won deals in Q4\"",correct:"Stage = Closed Won AND Close Date in Q4. No extras.",partial:"Adds Owner = you silently. Only your deals, not team.",incorrect:"No date filter. Closed Won across all quarters."},
+        {domain:"retail",product:"CRM Analytics",utterance:"\"Returns for electronics this month\"",correct:"Category = Electronics AND Date = March 2026.",partial:"Also filters Store = Flagship. Misses 14 locations.",incorrect:"No date filter. Shows 3 years, not this month."},
+        {domain:"edu",product:"Tableau Pulse Q&A",utterance:"\"Enrollment for graduate programs\"",correct:"Level = Graduate. All graduate programs shown.",partial:"Graduate AND Dept = Engineering from prior question.",incorrect:"No level filter. Undergrad + graduate combined."},
+        {domain:"health",product:"Tableau Concierge",utterance:"\"ICU admissions, patients over 65\"",correct:"Unit = ICU AND Age > 65. All matching shown.",partial:"Adds Diagnosis = Cardiac silently. Only cardiac ICU.",incorrect:"Age filter missing. All ICU admissions shown."}
+      ]},
+      {id:"V6",cat:"functionality",rt:"viz",title:"Confirm sort order",desc:"Ensure sort fields and directions match your request or can be reasonably inferred from context.",auditQ:"Is the data sorted the way I asked — especially for \"top N\" queries?",spectrum:["Correct field and direction, or semantically equivalent","Right field, wrong direction, or direction ambiguous","No sort when clearly expected, or sort on wrong field"],examples:[
+        {domain:"marketing",product:"Tableau Agent",utterance:"\"Top 5 campaigns by conversion rate\"",correct:"5 campaigns descending by Conversion. Highest first.",partial:"Ascending — shows lowest 5, not top 5.",incorrect:"Alphabetical. No sort on conversion at all."},
+        {domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"Worst agents by CSAT\"",correct:"Ascending by CSAT — lowest first. Matches 'worst'.",partial:"Descending — best agents shown. Direction inverted.",incorrect:"Alphabetical by name. CSAT not used as key."},
+        {domain:"finance",product:"CRM Analytics",utterance:"\"Bottom 10 accounts by revenue growth\"",correct:"Ascending by Growth %. Negative growth first.",partial:"Descending — top growers, not bottom.",incorrect:"By Account Name. Growth not factored in."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Rank sites by enrollment speed\"",correct:"Descending by Patients/Month. Fastest first.",partial:"By total enrollment, not rate. Large slow sites rank high.",incorrect:"Site-ID order. No ranking despite 'rank' in request."}
+      ]},
+      {id:"V7",cat:"design",rt:"viz",title:"Evaluate visual encodings",desc:"Check that color, size, shape, and labels map data to visual channels truthfully and appropriately.",auditQ:"Is each encoding type appropriate for the data type? Categorical palette for nominal?",spectrum:["Correct field + appropriate encoding type","Right field, wrong palette or extra encoding","Missing encoding, meaningless channel, or mismatch"],examples:[
+        {domain:"retail",product:"Tableau Agent",utterance:"\"Sales by region colored by category\"",correct:"Color → Category (nominal), distinct hues. Distinguishable.",partial:"Color → Category using sequential gradient. False ordering.",incorrect:"Color → Row ID. Every bar different, no meaning."},
+        {domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Readmissions by hospital, sized by volume\"",correct:"Size → Volume (quantitative), proportional. Color → Hospital.",partial:"Size → Hospital Name. Different sizes, meaningless.",incorrect:"No size encoding despite request."},
+        {domain:"sales",product:"CRM Analytics",utterance:"\"Pipeline by stage, colored by probability\"",correct:"Color → Probability, sequential gradient. Higher = darker.",partial:"Color → Probability, categorical hues. 20/50/80% unrelated.",incorrect:"Color → Owner. Ignores probability entirely."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"\"GPA vs SAT, shaped by program\"",correct:"Shape → Program (nominal), distinct marks. ≤6 programs.",partial:"15 programs — too many shapes, indistinguishable.",incorrect:"No shape. All circles. Program distinction lost."}
+      ]},
+      {id:"V8",cat:"design",rt:"viz",title:"Test interactivity",desc:"Verify that tooltips, selections, and drill-downs show accurate, relevant data on demand.",auditQ:"When I hover, does the tooltip show correct values with the right aggregation?",spectrum:["All fields correct, formatted, consistent","Partial coverage, wrong aggregation, or duplicates","No tooltip, wrong values, or contradicts chart"],examples:[
+        {domain:"cs",product:"Tableau Agent",utterance:"Hover over \"Cases by Category\"",correct:"Category: Billing, Cases: 847, Avg Res: 4.2 hrs. Matches.",partial:"Count correct but resolution shows Sum, not Average.",incorrect:"Shows Opportunity Amount — wrong datasource."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"Hover over \"Dose Response Curve\"",correct:"Dose: 50mg, Response: 62%, n=84, CI: 51-73%.",partial:"Dose and Response but missing sample size and CI.",incorrect:"No tooltip. Data points unidentifiable."},
+        {domain:"finance",product:"CRM Analytics",utterance:"Hover over portfolio allocation",correct:"Tech, 28.3%, $4.2M, Benchmark: 25.1%. All correct.",partial:"Sector and % but value = Count of Holdings, not $.",incorrect:"Previous quarter data. Stale, contradicts chart."},
+        {domain:"marketing",product:"Tableau Pulse Q&A",utterance:"Hover over \"Funnel by Stage\"",correct:"MQL, Count: 1,240, Conversion: 34%. Matches.",partial:"Stage and Count but conversion rate missing.",incorrect:"'Sum of MQL' shown on SQL stage. Labels wrong."}
+      ]},
+      {id:"L1",cat:"factual",rt:"nl",title:"Confirm factual grounding",desc:"Ensure the text explanation matches the visualization — same facts, direction, and magnitudes.",auditQ:"If I read only the text, would I draw the same conclusions as from the chart?",spectrum:["Measures, magnitudes, directions all match","Aligned but missing specifics or vague","Contradicts chart, wrong measure, or fabricated"],examples:[
+        {domain:"sales",product:"Tableau Agent",utterance:"\"How did Q4 pipeline perform?\"",correct:"\"Grew 18% to $12.3M, Enterprise +32%.\" Matches chart.",partial:"\"Healthy growth in Q4.\" No magnitudes.",incorrect:"\"Declined slightly.\" Contradicts visible growth."},
+        {domain:"health",product:"Tableau Pulse Q&A",utterance:"\"Summarize ER wait trends\"",correct:"\"Rose from 42 to 67 min, +60%.\" Matches line chart.",partial:"\"Waits increasing this year.\" No figures.",incorrect:"\"Remained stable.\" Contradicts upward trend."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"\"How are dropout rates trending?\"",correct:"\"Fell 8.2% to 5.1% over 3 years, −38%.\" Matches.",partial:"\"Improved recently.\" Vague, no magnitude.",incorrect:"\"At all-time high.\" Contradicts declining trend."},
+        {domain:"retail",product:"CRM Analytics",utterance:"\"What happened to basket size?\"",correct:"\"Dropped $47 to $41 in Q3, −13%. Electronics drove it.\"",partial:"\"Dipped slightly.\" 13% is not slight.",incorrect:"\"New peak in Q3.\" Text says up, chart says down."}
+      ]},
+      {id:"L2",cat:"analytical",rt:"nl",title:"Demand assumption disclosure",desc:"Look for the AI to surface filters, timeframes, aggregation choices, and field mappings it applied.",auditQ:"Did the AI tell me what it assumed — or silently make choices I can't verify?",spectrum:["States filters, timeframes, aggregation, mappings","Some assumptions noted but key ones missing","No disclosure — zero transparency"],examples:[
+        {domain:"marketing",product:"Tableau Agent",utterance:"\"Show campaign performance\"",correct:"\"Active, Q1 2026, by conversion, excluding tests.\"",partial:"\"Filtered to Q1.\" Omits test exclusion.",incorrect:"\"Here is performance.\" Nothing stated."},
+        {domain:"finance",product:"CRM Analytics",utterance:"\"Compare fund performance\"",correct:"\"12-mo TWR, net of fees, vs S&P 500, March 2026.\"",partial:"\"12-month returns.\" Omits fees and benchmark.",incorrect:"\"Here are comparisons.\" No methodology."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Show treatment outcomes\"",correct:"\"ITT, primary endpoint Wk 12, excl. screen failures.\"",partial:"\"Week 12 results.\" Omits analysis population.",incorrect:"\"Here are outcomes.\" No details at all."},
+        {domain:"cs",product:"Tableau Pulse Q&A",utterance:"\"How is support performing?\"",correct:"\"Avg resolution (hrs), Tier 1-3, excl. auto-closed, 30d.\"",partial:"\"Last 30 days.\" Omits exclusion criteria.",incorrect:"\"Here is performance.\" No metric or window."}
+      ]},
+      {id:"L3",cat:"analytical",rt:"nl",title:"Seek meaningful insights",desc:"Evaluate whether the AI surfaces trends, anomalies, and actionable implications beyond restating your query.",auditQ:"Did it tell me something I didn't know — or just echo my request?",spectrum:["Trends + anomalies + causes + actions","Basic observation, no explanation or action","Echoes query, no analytical value"],examples:[
+        {domain:"retail",product:"Tableau Agent",utterance:"\"What's happening with returns?\"",correct:"\"Electronics +40% in March — new laptop. Investigate quality.\"",partial:"\"Electronics returns higher.\" No cause or action.",incorrect:"\"Here is a breakdown.\" Restates request."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"\"Why is enrollment down?\"",correct:"\"Online −22%, in-person +8% — pandemic shift. Aid apps −15%.\"",partial:"\"Down 12% vs last year.\" No explanation.",incorrect:"\"Here are the numbers.\" Ignores the 'why'."},
+        {domain:"sales",product:"CRM Analytics",utterance:"\"How is the West doing?\"",correct:"\"−15% quota but 42% close rate. Bottleneck is volume, not conversion.\"",partial:"\"Below quota.\" No root cause.",incorrect:"\"Here is West performance.\" Echoes request."},
+        {domain:"health",product:"Tableau Pulse Q&A",utterance:"\"What's happening with readmissions?\"",correct:"\"Cardiology 11→16% in Q3, heart failure. July protocol change.\"",partial:"\"Increased in Q3.\" No dept or cause.",incorrect:"\"Here are rates.\" No analysis."}
+      ]},
+      {id:"C1",cat:"conversation",rt:"conv",title:"Check coherence",desc:"Evaluate whether the response is internally consistent, logically structured, and free from contradictions.",auditQ:"Does each sentence follow logically — or does it contradict itself?",spectrum:["Clear logical chain, cause-and-effect, consistent","Mostly coherent, minor gaps or non-sequiturs","Self-contradictory, broken logic"],examples:[
+        {domain:"cs",product:"Tableau Agent",utterance:"\"Why did CSAT drop in March?\"",correct:"\"Fell to 3.2 as resolution rose 40%. CRM migration caused delays.\"",partial:"\"CSAT dropped. Resolution up. Hired agents.\" No connection.",incorrect:"\"CSAT improved, so invest to fix decline.\" Contradicts itself."},
+        {domain:"finance",product:"CRM Analytics",utterance:"\"Explain portfolio performance\"",correct:"\"Tech at 35% drove 4.2% gain. But overweight = concentration risk.\"",partial:"\"Tech good. Bonds down. Positive overall.\" Disconnected.",incorrect:"\"Returns strong so risk low, leverage up.\" Returns ≠ low risk."},
+        {domain:"marketing",product:"Tableau Pulse Q&A",utterance:"\"What happened to email engagement?\"",correct:"\"Opens −12% after list +30% — diluted quality. Clicks held.\"",partial:"\"Opens fell. Clicks stable. List grew.\" No causal link.",incorrect:"\"Engagement up, but address sharp decline.\" Contradicts."},
+        {domain:"lifesci",product:"Tableau Data Pro",utterance:"\"Summarize the safety profile\"",correct:"\"Grade 3+ AEs: 18% high vs 7% low dose, dose-dependent. No new signals.\"",partial:"\"AEs higher high-dose. Well-tolerated. No concerns.\" Contradicts.",incorrect:"\"Safety excellent, increase dose to improve.\" If excellent, why?"}
+      ]},
+      {id:"C2",cat:"conversation",rt:"conv",title:"Test follow-up relevance",desc:"In multi-turn analysis, verify the AI retains context — filters, categories, goals — across turns.",auditQ:"Did earlier filters and context carry forward, or did it start from scratch?",spectrum:["All prior context preserved, adapts to intent","Some context kept, key filters dropped","Context lost, resets, re-specify everything"],examples:[
+        {domain:"health",product:"Tableau Agent",utterance:"T1: \"ICU by month\" → T2: \"By diagnosis\"",correct:"Diagnosis within ICU monthly. Both preserved.",partial:"Diagnosis shown but monthly axis dropped.",incorrect:"All admissions by diagnosis. ICU + monthly lost."},
+        {domain:"sales",product:"CRM Analytics",utterance:"T1: \"Enterprise pipeline\" → T2: \"Compare to last Q\"",correct:"Enterprise current vs last Q. Segment preserved.",partial:"Compares quarters but Enterprise dropped.",incorrect:"Current Q, all segments. Both gone."},
+        {domain:"retail",product:"Tableau Pulse Q&A",utterance:"T1: \"Online, Northeast\" → T2: \"Categories growing?\"",correct:"Growth within Online + Northeast. Both retained.",partial:"Online growth but Northeast dropped.",incorrect:"All-channel, all-region. Turn 1 ignored."},
+        {domain:"edu",product:"Tableau Concierge",utterance:"T1: \"STEM enrollment\" → T2: \"Gender breakdown\"",correct:"Gender within STEM. Filter preserved.",partial:"Gender all programs. STEM dropped.",incorrect:"University demographics. All context lost."}
+      ]}
+    ];
 
-    const allCards=criteria.flatMap(c=>c.examples.map((ex,i)=>({...c,exIdx:i,ex,cardKey:`${c.id}-${i}`})));
+    // ─────────────────────────────────────────────────────────────────────
+    // TIER_DATA — full chart spec + NL response + scored metrics, per tier.
+    // Keyed by `${criterionId}-${exampleIdx}`. Metric scoring follows the
+    // graded rubrics from Palani & Setlur, Lexara (CHI '26) §5.2.
+    // ─────────────────────────────────────────────────────────────────────
 
-    function Front({card}){
-      const cat=CATS[card.cat];
-      const isDark=cat.fg==="#fff";
-      const sbarBg=isDark?"rgba(0,0,0,0.15)":"rgba(3,45,96,0.08)";
-      const sbarTxt=isDark?"rgba(255,255,255,0.4)":"rgba(3,45,96,0.3)";
-      const ovrBg=isDark?"rgba(0,0,0,0.12)":"rgba(3,45,96,0.08)";
-      const sideLabel=`${RESP[card.rt]} – ${DOMAINS[card.ex.domain]}`;
-      return(
-        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:8,overflow:"hidden",display:"flex",background:cat.bg,color:cat.fg,boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
-          <div style={{width:18,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
-            <span style={{fontSize:6,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
+    // Builds the 12-metric array (7 viz + Overall viz + 3 NL + Overall NL).
+    // Pass in only the scores/whys that differ from 100 / undefined.
+    function M(scores={}, whys={}) {
+      const s = (k) => scores[k] ?? 100;
+      const v = [
+        {label:"Data fidelity",     score:s("dataFidelity"), why:whys.dataFidelity},
+        {label:"Field similarity",  score:s("fieldSim"),     why:whys.fieldSim},
+        {label:"Chart type",        score:s("chartType"),    why:whys.chartType},
+        {label:"Axis accuracy",     score:s("axisAcc"),      why:whys.axisAcc},
+        {label:"Filter accuracy",   score:s("filterAcc"),    why:whys.filterAcc},
+        {label:"Sort accuracy",     score:s("sortAcc"),      why:whys.sortAcc},
+        {label:"Visual encoding",   score:s("visEnc"),       why:whys.visEnc},
+      ];
+      const oViz = scores.overallViz ?? Math.round(v.reduce((a,b)=>a+b.score,0)/v.length);
+      const n = [
+        {label:"Factual grounding",     score:s("factual"),     why:whys.factual},
+        {label:"Insightfulness",        score:s("insightful"),  why:whys.insightful},
+        {label:"Assumptions disclosure",score:s("assumptions"), why:whys.assumptions},
+      ];
+      const oNL = scores.overallNL ?? Math.round(n.reduce((a,b)=>a+b.score,0)/n.length);
+      return [...v, {label:"Overall viz",score:oViz,bold:true}, ...n, {label:"Overall NL",score:oNL,bold:true}];
+    }
+
+    const SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
+    const HBAR = (data, y, x, xTitle, xAxis={}, opts={}) => ({
+      $schema:SCHEMA, data:{values:data}, mark:{type:"bar",color:opts.color||"#1896FF"},
+      encoding:{
+        y:{field:y,type:"nominal",sort:opts.sort||"-x",title:null,axis:{labelFontSize:9}},
+        x:{field:x,type:"quantitative",title:xTitle,axis:{titleFontSize:9,labelFontSize:8,...xAxis},...(opts.xScale?{scale:opts.xScale}:{})}
+      }
+    });
+    const VBAR = (data, x, y, yTitle, opts={}) => ({
+      $schema:SCHEMA, data:{values:data}, mark:{type:"bar",color:opts.color||"#1896FF"},
+      encoding:{
+        x:{field:x,type:opts.xType||"nominal",sort:opts.sort,title:null,axis:{labelFontSize:9,...(opts.xAxis||{})}},
+        y:{field:y,type:"quantitative",title:yTitle,axis:{titleFontSize:9,labelFontSize:8},...(opts.yScale?{scale:opts.yScale}:{})},
+        ...(opts.color2?{color:opts.color2}:{})
+      }
+    });
+    const LINE = (data, x, y, opts={}) => ({
+      $schema:SCHEMA, data:{values:data}, mark:{type:"line",color:opts.color||"#1896FF",point:opts.point!==false},
+      encoding:{
+        x:{field:x,type:opts.xType||"ordinal",title:opts.xTitle||null,axis:{labelFontSize:9}},
+        y:{field:y,type:"quantitative",title:opts.yTitle||null,axis:{titleFontSize:9,labelFontSize:8},...(opts.yScale?{scale:opts.yScale}:{})}
+      }
+    });
+    const SCAT = (data, x, y, xTitle, yTitle, opts={}) => ({
+      $schema:SCHEMA, data:{values:data}, mark:{type:"point",color:opts.color||"#1896FF",filled:true,size:55},
+      encoding:{
+        x:{field:x,type:"quantitative",title:xTitle,axis:{titleFontSize:9,labelFontSize:8}},
+        y:{field:y,type:"quantitative",title:yTitle,axis:{titleFontSize:9,labelFontSize:8}},
+        ...(opts.color2?{color:opts.color2}:{}),...(opts.shape?{shape:opts.shape}:{})
+      }
+    });
+    const PIE = (data, theta, color) => ({
+      $schema:SCHEMA, data:{values:data}, mark:{type:"arc",innerRadius:0},
+      encoding:{theta:{field:theta,type:"quantitative"}, color:{field:color,type:"nominal",legend:{labelFontSize:8,titleFontSize:8}}}
+    });
+
+    const REPS_REVENUE = [
+      {rep:"Sarah Chen",revenue:420000},{rep:"Marcus Wong",revenue:385000},
+      {rep:"Priya Patel",revenue:362000},{rep:"James Liu",revenue:341000},
+      {rep:"Linda Garcia",revenue:312000},{rep:"David Kim",revenue:298000},
+      {rep:"Emma Brown",revenue:275000},{rep:"Carlos Santos",revenue:260000},
+      {rep:"Jin Tanaka",revenue:245000},{rep:"Sofia Reyes",revenue:230000},
+      {rep:"Ahmed Hassan",revenue:215000},{rep:"Lucas Becker",revenue:198000}
+    ];
+    const REPS_DEALS = REPS_REVENUE.map((r,i)=>({rep:r.rep, deals:[14,12,11,10,9,9,8,8,7,7,6,5][i]}));
+
+    const TIER_DATA = {
+      // ── V1 · Verify data fidelity ───────────────────────────────────────
+      "V1-0": {
+        correct:   { spec: HBAR(REPS_REVENUE, "rep", "revenue", "Sum of Revenue (Q3)", {format:"$,.0f"}),
+                     nl: "Q3 revenue summed across closed-won opportunities, by sales rep. Sarah Chen leads at $420K. All 12 reps shown, sorted descending. Total Q3 closed-won: $3.5M.",
+                     metrics: M({insightful:40, assumptions:80, overallNL:80}, {
+                       insightful:"States facts and the leader; no anomaly, comparison vs. quota, or recommended action.",
+                       assumptions:"Surfaces aggregation (sum), period (Q3), filter (closed-won) — but doesn't state currency or bookings vs. recognized revenue."}) },
+        partial:   { spec: HBAR(REPS_DEALS, "rep", "deals", "Count of Opportunities (Q3)"),
+                     nl: "Q3 by sales rep. Sarah Chen leads with 14, followed by Marcus Wong at 12. All 12 reps included.",
+                     metrics: M({dataFidelity:70, fieldSim:85, axisAcc:90, factual:70, insightful:30, assumptions:30, overallViz:78, overallNL:50}, {
+                       dataFidelity:"Same rows and fields, but aggregation is Count of Opportunities instead of Sum of Revenue. Same-rows + minor aggregation difference = 70%.",
+                       fieldSim:"Bound field is Opportunity (deal) instead of Revenue. Both quantitative, semantic similarity high but not exact.",
+                       axisAcc:"X-axis label correct for what's plotted, but doesn't match the user's revenue intent.",
+                       factual:"Numbers match the chart, but text never says values are deal counts — a reader would assume dollars.",
+                       insightful:"Restates the leader and total; no commentary on the aggregation choice.",
+                       assumptions:"Doesn't disclose that aggregation is count, not sum — the most important assumption to surface."}) },
+        incorrect: { spec: HBAR(REPS_REVENUE.slice(0,8), "rep", "revenue", "Sum of Revenue (Q3)", {format:"$,.0f"}),
+                     nl: "Top revenue performers this quarter. Sarah Chen leads at $420K, followed by Marcus Wong at $385K and Priya Patel at $362K.",
+                     metrics: M({dataFidelity:0, filterAcc:30, factual:50, insightful:20, assumptions:0, overallViz:62, overallNL:25}, {
+                       dataFidelity:"4 of 12 reps silently dropped. Missing rows = 0% — incomplete coverage breaks trust.",
+                       filterAcc:"An undisclosed top-N filter was applied. User asked for all reps; system silently truncated to 8.",
+                       factual:"Numbers shown are accurate, but \"top revenue performers\" implies completeness. Reader can't tell 4 reps were excluded.",
+                       insightful:"Echoes the leaderboard without naming the cut-off or what would change if all 12 were shown.",
+                       assumptions:"No mention that the chart was filtered. Zero transparency on the dropped rows."}) }
+      },
+      "V1-1": {
+        correct:   { spec: HBAR([{dept:"Cardiology",rate:12.3},{dept:"ER",rate:9.4},{dept:"Oncology",rate:8.1},{dept:"Neurology",rate:7.8},{dept:"Surgery",rate:6.7},{dept:"Pediatrics",rate:4.2}], "dept", "rate", "Mean readmission rate (%)", {format:".1f"}),
+                     nl: "Mean 30-day readmission rate by department. Cardiology highest at 12.3%, Pediatrics lowest at 4.2%. All six departments included.",
+                     metrics: M({insightful:50, assumptions:80, overallNL:85}, {
+                       insightful:"Names extremes but doesn't flag that Cardiology is ~3× Pediatrics or suggest investigating clinical drivers.",
+                       assumptions:"States 30-day window and that all depts are included; doesn't disclose denominator (admissions vs. discharges)."}) },
+        partial:   { spec: HBAR([{dept:"Cardiology",median:11.5},{dept:"ER",median:9.0},{dept:"Oncology",median:7.8},{dept:"Neurology",median:7.2},{dept:"Surgery",median:6.4},{dept:"Pediatrics",median:4.0}], "dept", "median", "Median readmission rate (%)", {format:".1f"}),
+                     nl: "Readmission rate by department. Cardiology at 11.5%, Pediatrics lowest at 4.0%.",
+                     metrics: M({dataFidelity:70, factual:75, insightful:40, assumptions:30, overallViz:96, overallNL:48}, {
+                       dataFidelity:"Median used instead of mean — same departments and time period, different central tendency. Minor aggregation difference = 70%.",
+                       factual:"Values reflect what's plotted, but the user asked for average — text doesn't flag that median was used.",
+                       insightful:"Lists extremes only.",
+                       assumptions:"Doesn't disclose the swap from mean to median or why."}) },
+        incorrect: { spec: HBAR([{dept:"ER",count:520},{dept:"Cardiology",count:340},{dept:"Surgery",count:215},{dept:"Oncology",count:175},{dept:"Neurology",count:142},{dept:"Pediatrics",count:88}], "dept", "count", "Readmission count"),
+                     nl: "ER has the most readmissions at 520, followed by Cardiology at 340.",
+                     metrics: M({dataFidelity:0, fieldSim:30, factual:30, insightful:20, assumptions:0, overallViz:62, overallNL:18}, {
+                       dataFidelity:"Counts shown instead of rates. High-volume departments look worse purely from patient throughput.",
+                       fieldSim:"Bound to readmission count rather than the requested rate — a different measure altogether.",
+                       factual:"Numbers are accurate but represent counts; reader will misinterpret as rate.",
+                       insightful:"Echoes ranking without flagging that highest count ≠ highest rate.",
+                       assumptions:"No disclosure that the measure was switched from rate to count."}) }
+      },
+      "V1-2": {
+        correct:   { spec: HBAR([{cat:"Electronics",units:4200},{cat:"Apparel",units:3800},{cat:"Home",units:2950},{cat:"Beauty",units:2410},{cat:"Sports",units:1820},{cat:"Toys",units:1240}], "cat", "units", "Sum of Units sold", {format:",.0f"}),
+                     nl: "Total units sold by product category. Electronics highest at 4,200 units, Toys lowest at 1,240. All categories included.",
+                     metrics: M({insightful:40, assumptions:80, overallNL:80}, {
+                       insightful:"Lists totals; doesn't compare growth, margin, or seasonality.",
+                       assumptions:"Names aggregation (sum) and 'all categories' but no time window."}) },
+        partial:   { spec: HBAR([{cat:"Electronics",lines:2840},{cat:"Apparel",lines:3120},{cat:"Home",lines:2200},{cat:"Beauty",lines:1980},{cat:"Sports",lines:1340},{cat:"Toys",lines:920}], "cat", "lines", "Order Lines"),
+                     nl: "Apparel has the most order lines at 3,120, followed by Electronics at 2,840.",
+                     metrics: M({dataFidelity:70, fieldSim:75, factual:70, insightful:30, assumptions:30, overallViz:92, overallNL:43}, {
+                       dataFidelity:"Order lines counted instead of units — a multi-unit order counts as 1 line. Same-rows + aggregation drift = 70%.",
+                       fieldSim:"Order Line is sales-related but not the same measure as Units sold.",
+                       factual:"Values plotted are correct; text doesn't note 'lines' isn't 'units'.",
+                       insightful:"Echoes ranking without examining basket-size effects.",
+                       assumptions:"Doesn't disclose the line-vs-unit substitution."}) },
+        incorrect: { spec: HBAR([{cat:"Electronics",rev:1280000},{cat:"Apparel",rev:760000},{cat:"Home",rev:540000},{cat:"Beauty",rev:412000},{cat:"Sports",rev:298000},{cat:"Toys",rev:174000}], "cat", "rev", "Sum of Revenue", {format:"$,.0f"}),
+                     nl: "Electronics dominates by category at $1.28M, more than 3× Toys.",
+                     metrics: M({dataFidelity:0, fieldSim:20, factual:30, insightful:20, assumptions:0, overallViz:60, overallNL:17}, {
+                       dataFidelity:"Revenue shown instead of units. Electronics tops the list because of price, not volume.",
+                       fieldSim:"Revenue is a different measure than Units sold; not the user's intent.",
+                       factual:"Currency-formatted values mismatch the user's unit-count question.",
+                       insightful:"Restates the chart's ranking.",
+                       assumptions:"No disclosure that the measure was switched."}) }
+      },
+      "V1-3": {
+        correct:   { spec: HBAR([{prog:"Computer Science",enroll:342},{prog:"Business",enroll:289},{prog:"Biology",enroll:248},{prog:"Psychology",enroll:215},{prog:"English",enroll:163},{prog:"History",enroll:124}], "prog", "enroll", "Headcount (current semester)"),
+                     nl: "Current-semester headcount by program. Computer Science leads at 342, History smallest at 124. Six programs shown.",
+                     metrics: M({insightful:40, assumptions:80, overallNL:80}, {
+                       insightful:"Lists totals; doesn't compare to prior-year or capacity.",
+                       assumptions:"States 'current semester' and headcount; doesn't note whether part-time students are included."}) },
+        partial:   { spec: HBAR([{prog:"Computer Science",ch:4106},{prog:"Business",ch:3372},{prog:"Biology",ch:2890},{prog:"Psychology",ch:2515},{prog:"English",ch:1814},{prog:"History",ch:1378}], "prog", "ch", "Sum of Credit Hours"),
+                     nl: "Credit hours by program this semester. Computer Science leads at 4,106 credit hours.",
+                     metrics: M({dataFidelity:70, fieldSim:80, factual:70, insightful:30, assumptions:30, overallViz:93, overallNL:43}, {
+                       dataFidelity:"Credit hours instead of headcount — same students, different unit, so part-timers under-count.",
+                       fieldSim:"Credit hours is enrollment-adjacent but not the same as student count.",
+                       factual:"Values are credit hours; text doesn't make the unit explicit.",
+                       insightful:"Echoes ranking without flagging the unit issue.",
+                       assumptions:"Doesn't disclose the headcount-to-credit-hour substitution."}) },
+        incorrect: { spec: HBAR([{prog:"Computer Science",cum:1820},{prog:"Business",cum:1495},{prog:"Biology",cum:1224},{prog:"Psychology",cum:1058},{prog:"English",cum:782},{prog:"History",cum:614}], "prog", "cum", "Cumulative enrollment (all-time)"),
+                     nl: "Computer Science leads cumulative enrollment at 1,820 students.",
+                     metrics: M({dataFidelity:0, filterAcc:0, factual:30, insightful:20, assumptions:0, overallViz:57, overallNL:17}, {
+                       dataFidelity:"Historical cumulative totals shown, not current semester. Numbers ~5× too high.",
+                       filterAcc:"Required 'this semester' filter is missing; all terms accumulated.",
+                       factual:"Values reflect a different time scope than asked.",
+                       insightful:"Repeats the chart's leader without flagging time-scope error.",
+                       assumptions:"No disclosure that the time filter was dropped."}) }
+      },
+
+      // ── V2 · Check field similarity ─────────────────────────────────────
+      "V2-0": {
+        correct:   { spec: LINE([{m:"Jan",roi:0.18},{m:"Feb",roi:0.22},{m:"Mar",roi:0.31},{m:"Apr",roi:0.27},{m:"May",roi:0.35},{m:"Jun",roi:0.42}], "m", "roi", {xTitle:"Month",yTitle:"ROI = (Revenue − Cost) / Cost"}),
+                     nl: "Campaign ROI over the last six months, computed as (Revenue − Cost) / Cost. Trending up from 18% in Jan to 42% in Jun.",
+                     metrics: M({insightful:50, assumptions:80, overallNL:85}, {
+                       insightful:"Notes upward trend but doesn't flag what drove the Mar dip-to-Jun rebound.",
+                       assumptions:"Defines ROI formula; doesn't say which campaigns are included."}) },
+        partial:   { spec: LINE([{m:"Jan",rev:48000},{m:"Feb",rev:62000},{m:"Mar",rev:81000},{m:"Apr",rev:73000},{m:"May",rev:95000},{m:"Jun",rev:108000}], "m", "rev", {xTitle:"Month",yTitle:"Revenue ($)"}),
+                     nl: "Campaign revenue rising from $48K in Jan to $108K in Jun.",
+                     metrics: M({fieldSim:70, dataFidelity:90, factual:60, insightful:30, assumptions:30, overallViz:94, overallNL:40}, {
+                       fieldSim:"Revenue mapped instead of ROI — related but ignores the cost component.",
+                       dataFidelity:"Values themselves are accurate revenues; ROI just isn't computed.",
+                       factual:"Text describes revenue; user asked about ROI.",
+                       insightful:"Linear restatement of the chart.",
+                       assumptions:"Doesn't disclose that ROI was reduced to revenue."}) },
+        incorrect: { spec: LINE([{m:"Jan",ctr:0.024},{m:"Feb",ctr:0.026},{m:"Mar",ctr:0.022},{m:"Apr",ctr:0.028},{m:"May",ctr:0.025},{m:"Jun",ctr:0.029}], "m", "ctr", {xTitle:"Month",yTitle:"Click-through rate"}),
+                     nl: "CTR has been steady around 2.5% over six months.",
+                     metrics: M({fieldSim:10, dataFidelity:50, factual:20, insightful:20, assumptions:0, overallViz:80, overallNL:13}, {
+                       fieldSim:"CTR is unrelated to ROI — a top-of-funnel rate vs. a profitability ratio.",
+                       dataFidelity:"CTR values are accurate, but they're the wrong measure for the question.",
+                       factual:"Text describes the wrong metric entirely.",
+                       insightful:"No analysis of profitability.",
+                       assumptions:"No mention that the field changed from ROI to CTR."}) }
+      },
+      "V2-1": {
+        correct:   { spec: HBAR([{arm:"Treatment A",rate:62},{arm:"Treatment B",rate:48},{arm:"Placebo",rate:21}], "arm", "rate", "Primary endpoint response rate (%)"),
+                     nl: "Primary endpoint response rate by trial arm. Treatment A 62%, B 48%, Placebo 21%. ITT population.",
+                     metrics: M({insightful:60, assumptions:90, overallNL:90}, {
+                       insightful:"Compares arms; could call out delta vs. placebo and statistical significance.",
+                       assumptions:"States ITT and primary endpoint; doesn't name the timepoint."}) },
+        partial:   { spec: HBAR([{arm:"Treatment A",os:18.4},{arm:"Treatment B",os:14.2},{arm:"Placebo",os:9.8}], "arm", "os", "Overall survival (months)"),
+                     nl: "Overall survival by trial arm. Treatment A median 18.4 mo, B 14.2, Placebo 9.8.",
+                     metrics: M({fieldSim:70, factual:60, insightful:40, assumptions:30, overallViz:96, overallNL:43}, {
+                       fieldSim:"Overall survival is related to efficacy but a different endpoint than primary response rate.",
+                       factual:"Values plotted are correct OS estimates; not the asked-for measure.",
+                       insightful:"Lists arms; no commentary on endpoint substitution.",
+                       assumptions:"Doesn't disclose that the endpoint was switched from response rate to OS."}) },
+        incorrect: { spec: HBAR([{arm:"Treatment A",n:412},{arm:"Treatment B",n:398},{arm:"Placebo",n:201}], "arm", "n", "Enrollment count"),
+                     nl: "Treatment A had the most enrolled subjects at 412.",
+                     metrics: M({fieldSim:10, factual:25, insightful:15, assumptions:0, overallViz:87, overallNL:13}, {
+                       fieldSim:"Enrollment count has nothing to do with efficacy.",
+                       factual:"Larger arms look 'more effective' purely from sample size.",
+                       insightful:"Misleads — implies enrollment correlates with efficacy.",
+                       assumptions:"No disclosure that efficacy was replaced with sample size."}) }
+      },
+      "V2-2": {
+        correct:   { spec: HBAR([{sec:"Tech",twr:14.2},{sec:"Healthcare",twr:9.8},{sec:"Financials",twr:7.4},{sec:"Energy",twr:5.1},{sec:"Utilities",twr:3.6}], "sec", "twr", "Time-weighted return (%)"),
+                     nl: "Time-weighted returns by sector (GICS). Tech leads at 14.2%, Utilities trails at 3.6%.",
+                     metrics: M({insightful:60, assumptions:90, overallNL:90}, {
+                       insightful:"Lists by sector; could note dispersion and benchmark deviation.",
+                       assumptions:"Names TWR and GICS classification; doesn't state the period."}) },
+        partial:   { spec: HBAR([{sec:"Tech",gain:1480000},{sec:"Healthcare",gain:920000},{sec:"Financials",gain:640000},{sec:"Energy",gain:310000},{sec:"Utilities",gain:185000}], "sec", "gain", "Absolute gain ($)", {format:"$,.0f"}),
+                     nl: "Tech generated the largest absolute gain at $1.48M.",
+                     metrics: M({fieldSim:70, factual:60, insightful:30, assumptions:30, overallViz:96, overallNL:40}, {
+                       fieldSim:"Absolute gain is performance-adjacent but doesn't normalize for capital deployed.",
+                       factual:"Numbers are accurate $; user asked for return %.",
+                       insightful:"Misleading — large allocations look 'best' regardless of return.",
+                       assumptions:"Doesn't disclose absolute-vs-percent substitution."}) },
+        incorrect: { spec: HBAR([{sec:"Tech",aum:9800000},{sec:"Healthcare",aum:5200000},{sec:"Financials",aum:4100000},{sec:"Energy",aum:1900000},{sec:"Utilities",aum:1100000}], "sec", "aum", "AUM ($)", {format:"$,.0f"}),
+                     nl: "Tech holds the largest allocation at $9.8M AUM.",
+                     metrics: M({fieldSim:10, factual:20, insightful:15, assumptions:0, overallViz:87, overallNL:12}, {
+                       fieldSim:"AUM measures size, not performance.",
+                       factual:"Sectors with more capital appear to 'perform' better — not what was asked.",
+                       insightful:"No performance analysis at all.",
+                       assumptions:"No disclosure that returns were replaced with AUM."}) }
+      },
+      "V2-3": {
+        correct:   { spec: HBAR([{tier:"Tier 1",hrs:2.4},{tier:"Tier 2",hrs:6.1},{tier:"Tier 3",hrs:14.8},{tier:"Tier 4",hrs:38.2}], "tier", "hrs", "Avg time to resolution (hrs)", {format:".1f"}, {sort:"x"}),
+                     nl: "Average time to full resolution by support tier. Tier 1 fastest at 2.4 hrs, Tier 4 longest at 38.2 hrs.",
+                     metrics: M({insightful:50, assumptions:85, overallNL:85}, {
+                       insightful:"Names tiers and times; doesn't probe whether Tier 4's tail is driven by edge cases.",
+                       assumptions:"States avg full resolution; doesn't disclose whether holiday windows are excluded."}) },
+        partial:   { spec: HBAR([{tier:"Tier 1",frt:0.8},{tier:"Tier 2",frt:1.4},{tier:"Tier 3",frt:2.2},{tier:"Tier 4",frt:3.6}], "tier", "frt", "First response time (hrs)", {format:".1f"}, {sort:"x"}),
+                     nl: "First-response time by tier. Tier 1 0.8 hrs, Tier 4 3.6 hrs.",
+                     metrics: M({fieldSim:70, factual:60, insightful:30, assumptions:30, overallViz:96, overallNL:40}, {
+                       fieldSim:"First response time is related to resolution but a much faster milestone.",
+                       factual:"Values plotted are accurate FRT; user asked about full resolution.",
+                       insightful:"No commentary on the substitution.",
+                       assumptions:"Doesn't disclose FRT-vs-resolution swap."}) },
+        incorrect: { spec: HBAR([{tier:"Tier 4",cases:1240},{tier:"Tier 3",cases:920},{tier:"Tier 2",cases:560},{tier:"Tier 1",cases:340}], "tier", "cases", "Case count"),
+                     nl: "Tier 4 has the highest case count at 1,240.",
+                     metrics: M({fieldSim:10, factual:20, insightful:15, assumptions:0, overallViz:87, overallNL:12}, {
+                       fieldSim:"Case count is volume, not resolution time.",
+                       factual:"High-volume tiers appear 'slowest' purely from caseload.",
+                       insightful:"No resolution-time analysis.",
+                       assumptions:"No disclosure that the measure was switched."}) }
+      },
+
+      // ── V3 · Validate chart type ────────────────────────────────────────
+      "V3-0": {
+        correct:   { spec: LINE([{m:"Jan",pipe:2.4},{m:"Feb",pipe:2.8},{m:"Mar",pipe:3.5},{m:"Apr",pipe:3.2},{m:"May",pipe:4.1},{m:"Jun",pipe:4.6},{m:"Jul",pipe:4.3},{m:"Aug",pipe:5.0},{m:"Sep",pipe:5.8},{m:"Oct",pipe:6.4},{m:"Nov",pipe:7.1},{m:"Dec",pipe:7.8}], "m", "pipe", {xTitle:"Month",yTitle:"Pipeline ($M)"}),
+                     nl: "Pipeline grew from $2.4M in Jan to $7.8M in Dec — a 225% increase across the year.",
+                     metrics: M({insightful:60, assumptions:85, overallNL:90}, {
+                       insightful:"Magnitude stated; doesn't unpack which segments drove the growth.",
+                       assumptions:"States the time window; doesn't explicitly name the stage filter."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{m:"Jan",pipe:2.4},{m:"Feb",pipe:2.8},{m:"Mar",pipe:3.5},{m:"Apr",pipe:3.2},{m:"May",pipe:4.1},{m:"Jun",pipe:4.6},{m:"Jul",pipe:4.3},{m:"Aug",pipe:5.0},{m:"Sep",pipe:5.8},{m:"Oct",pipe:6.4},{m:"Nov",pipe:7.1},{m:"Dec",pipe:7.8}]},
+                     mark:{type:"area",color:"#1896FF",opacity:0.6,line:{color:"#1896FF"}},
+                     encoding:{x:{field:"m",type:"ordinal",title:"Month",axis:{labelFontSize:9}},y:{field:"pipe",type:"quantitative",title:"Pipeline ($M)",axis:{titleFontSize:9,labelFontSize:8}}} },
+                     nl: "Pipeline trends upward over the year from $2.4M to $7.8M.",
+                     metrics: M({chartType:50, insightful:40, assumptions:80, overallViz:93, overallNL:73}, {
+                       chartType:"Area is a valid alternative for time-series, but filled area can obscure exact magnitudes vs. a clean line.",
+                       insightful:"Trend stated without segment breakdown.",
+                       assumptions:"Time window noted; stage filter implied."}) },
+        incorrect: { spec: PIE([{m:"Jan",pipe:2.4},{m:"Feb",pipe:2.8},{m:"Mar",pipe:3.5},{m:"Apr",pipe:3.2},{m:"May",pipe:4.1},{m:"Jun",pipe:4.6},{m:"Jul",pipe:4.3},{m:"Aug",pipe:5.0},{m:"Sep",pipe:5.8},{m:"Oct",pipe:6.4},{m:"Nov",pipe:7.1},{m:"Dec",pipe:7.8}], "pipe", "m"),
+                     nl: "Pipeline distribution across the 12 months of the year.",
+                     metrics: M({chartType:0, factual:40, insightful:20, assumptions:0, overallViz:86, overallNL:20}, {
+                       chartType:"Pie chart with 12 slices destroys temporal ordering — can't read trend or compare months.",
+                       factual:"Text says 'distribution' — doesn't mention the upward trend the data actually shows.",
+                       insightful:"Generic; trend invisible.",
+                       assumptions:"No methodology disclosed."}) }
+      },
+      "V3-1": {
+        correct:   { spec: HBAR([{dept:"Engineering",rate:0.91},{dept:"Business",rate:0.87},{dept:"Biology",rate:0.84},{dept:"English",rate:0.79},{dept:"Psychology",rate:0.76},{dept:"History",rate:0.71}], "dept", "rate", "Graduation rate", {format:".0%"}),
+                     nl: "Graduation rates across departments. Engineering highest at 91%, History lowest at 71%.",
+                     metrics: M({insightful:50, assumptions:85, overallNL:85}, {
+                       insightful:"Names extremes; doesn't probe drivers of the spread.",
+                       assumptions:"Implies cohort but doesn't name it."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{dept:"Engineering",rate:0.91},{dept:"Business",rate:0.87},{dept:"Biology",rate:0.84},{dept:"English",rate:0.79},{dept:"Psychology",rate:0.76},{dept:"History",rate:0.71}]},
+                     mark:{type:"point",color:"#1896FF",filled:true,size:90},
+                     encoding:{y:{field:"dept",type:"nominal",sort:"-x",title:null,axis:{labelFontSize:9}},x:{field:"rate",type:"quantitative",title:"Graduation rate",axis:{format:".0%",titleFontSize:9,labelFontSize:8}}} },
+                     nl: "Graduation rates across departments range from 71% to 91%.",
+                     metrics: M({chartType:50, insightful:40, assumptions:80, overallViz:93, overallNL:73}, {
+                       chartType:"Dot plot is valid for categorical comparison but less familiar than bars for most audiences.",
+                       insightful:"Range stated; no driver analysis.",
+                       assumptions:"Cohort still not explicit."}) },
+        incorrect: { spec: LINE([{dept:"Engineering",rate:0.91},{dept:"Business",rate:0.87},{dept:"Biology",rate:0.84},{dept:"English",rate:0.79},{dept:"Psychology",rate:0.76},{dept:"History",rate:0.71}], "dept", "rate", {yTitle:"Graduation rate"}),
+                     nl: "Graduation rates trend down across departments.",
+                     metrics: M({chartType:0, factual:30, insightful:20, assumptions:0, overallViz:86, overallNL:17}, {
+                       chartType:"Line chart connecting unordered categories implies false continuity.",
+                       factual:"\"Trend\" is misleading — these are independent departments, not a sequence.",
+                       insightful:"Misleading framing.",
+                       assumptions:"No methodology."}) }
+      },
+      "V3-2": {
+        correct:   { spec: SCAT([{wait:5,sat:4.8},{wait:8,sat:4.6},{wait:12,sat:4.3},{wait:18,sat:3.9},{wait:25,sat:3.4},{wait:32,sat:2.9},{wait:42,sat:2.4},{wait:55,sat:1.8},{wait:14,sat:4.1},{wait:22,sat:3.6},{wait:35,sat:2.7},{wait:48,sat:2.0}], "wait", "sat", "Wait time (min)", "Satisfaction (1–5)"),
+                     nl: "Strong negative relationship between wait time and satisfaction. Each 10-minute increase in wait corresponds to roughly 0.5 lower satisfaction.",
+                     metrics: M({insightful:70, assumptions:90, overallNL:95}, {
+                       insightful:"Identifies the relationship and rate; could note inflection points or outliers.",
+                       assumptions:"States measures clearly."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{x:"5",wait:5,sat:4.8},{x:"8",wait:8,sat:4.6},{x:"12",wait:12,sat:4.3},{x:"18",wait:18,sat:3.9},{x:"25",wait:25,sat:3.4},{x:"32",wait:32,sat:2.9},{x:"42",wait:42,sat:2.4},{x:"55",wait:55,sat:1.8}]},
+                     layer:[
+                       {mark:{type:"bar",color:"#1896FF",opacity:0.6},encoding:{x:{field:"x",type:"ordinal",title:"Wait (min)",axis:{labelFontSize:9}},y:{field:"wait",type:"quantitative",title:"Wait",axis:{titleFontSize:9,labelFontSize:8}}}},
+                       {mark:{type:"line",color:"#FF784F",point:true},encoding:{x:{field:"x",type:"ordinal"},y:{field:"sat",type:"quantitative",axis:{titleFontSize:9,labelFontSize:8,title:"Satisfaction"}}}}
+                     ] },
+                     nl: "Wait time and satisfaction shown together — wait rises while satisfaction falls.",
+                     metrics: M({chartType:50, factual:75, insightful:50, assumptions:80, overallViz:93, overallNL:68}, {
+                       chartType:"Dual-axis bar+line shows both measures but obscures point-by-point correlation that scatter would reveal.",
+                       factual:"Description matches the trend, not the relationship.",
+                       insightful:"States direction; misses magnitude.",
+                       assumptions:"Measures named."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{bucket:"Short (<15)",wait:60,sat:140},{bucket:"Medium (15–30)",wait:120,sat:90},{bucket:"Long (>30)",wait:180,sat:40}]},
+                     transform:[{fold:["wait","sat"],as:["measure","value"]}],
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"bucket",type:"nominal",title:null,axis:{labelFontSize:8}},y:{aggregate:"sum",field:"value",type:"quantitative",title:null,axis:{titleFontSize:9,labelFontSize:8}},color:{field:"measure",type:"nominal",legend:{labelFontSize:8}}} },
+                     nl: "Wait and satisfaction shown together by bucket.",
+                     metrics: M({chartType:0, factual:25, insightful:15, assumptions:0, overallViz:86, overallNL:13}, {
+                       chartType:"Stacked bar destroys the per-record pairing — relationship cannot be inferred.",
+                       factual:"Text doesn't describe a relationship at all.",
+                       insightful:"Nothing actionable.",
+                       assumptions:"None."}) }
+      },
+      "V3-3": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:Array.from({length:200},(_,i)=>({val:Math.round(40+Math.random()*180+(i%30===0?60:0)+(i%50===0?-30:0)+(i%17?0:50)*Math.random())}))},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{bin:{maxbins:18},field:"val",title:"Order value ($)",axis:{titleFontSize:9,labelFontSize:8}},y:{aggregate:"count",title:"Count of orders",axis:{titleFontSize:9,labelFontSize:8}}} },
+                     nl: "Histogram of order values across 200 recent orders. Right-skewed: most orders cluster $40–$140, with a long tail past $200.",
+                     metrics: M({insightful:60, assumptions:85, overallNL:90}, {
+                       insightful:"Names skew and modal range; could call out median and percentiles.",
+                       assumptions:"States 'recent orders' but not the time window."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{q:"Q1 (low)",val:78},{q:"Median",val:118},{q:"Q3 (high)",val:184}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"q",type:"nominal",title:null,axis:{labelFontSize:9}},y:{field:"val",type:"quantitative",title:"Order value ($)",axis:{titleFontSize:9,labelFontSize:8,format:"$,.0f"}}} },
+                     nl: "Order value distribution: median $118, IQR $78–$184.",
+                     metrics: M({chartType:50, insightful:50, assumptions:85, overallViz:93, overallNL:78}, {
+                       chartType:"Box-style summary is valid but loses the shape (skew, multimodality) a histogram exposes.",
+                       insightful:"Quantiles given; shape not described.",
+                       assumptions:"Time window still implicit."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:Array.from({length:30},(_,i)=>({id:`O${i+1}`,val:40+Math.round(Math.random()*200)}))},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"id",type:"nominal",title:"Order ID",axis:{labelFontSize:7,labelAngle:-90}},y:{field:"val",type:"quantitative",title:"Value",axis:{titleFontSize:9,labelFontSize:8}}} },
+                     nl: "Order values for 30 individual orders.",
+                     metrics: M({chartType:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       chartType:"One bar per order ID gives no distributional insight — just noise.",
+                       factual:"Doesn't describe a distribution.",
+                       insightful:"No analysis.",
+                       assumptions:"None."}) }
+      },
+
+      // ── V4 · Inspect axis accuracy ──────────────────────────────────────
+      "V4-0": {
+        correct:   { spec: VBAR([{fund:"Alpha",ret:8.4},{fund:"Beta",ret:7.1},{fund:"Gamma",ret:9.6},{fund:"Delta",ret:5.8},{fund:"Epsilon",ret:11.2}], "fund", "ret", "Quarterly return (%)", {yScale:{domainMin:0}}),
+                     nl: "Quarterly returns by fund. Epsilon leads at 11.2%, Delta lowest at 5.8%. Y-axis at 0% baseline.",
+                     metrics: M({insightful:50, assumptions:85, overallNL:85}, {
+                       insightful:"Names extremes; doesn't compare to benchmark.",
+                       assumptions:"Names quarter implicitly through 'quarterly return.'"}) },
+        partial:   { spec: VBAR([{fund:"Alpha",ret:8.4},{fund:"Beta",ret:7.1},{fund:"Gamma",ret:9.6},{fund:"Delta",ret:5.8},{fund:"Epsilon",ret:11.2}], "fund", "ret", "Quarterly return (%)", {yScale:{domain:[5,12]}}),
+                     nl: "Quarterly returns by fund. Visible spread between Epsilon and Delta.",
+                     metrics: M({axisAcc:70, factual:60, insightful:30, assumptions:30, overallViz:96, overallNL:40}, {
+                       axisAcc:"Y starts at 5% — exaggerates differences. Truncated baseline = 0.7× score.",
+                       factual:"Magnitudes plotted are accurate but visually distorted.",
+                       insightful:"Implies dramatic spread that doesn't exist on a 0-baseline.",
+                       assumptions:"Doesn't disclose the truncated axis."}) },
+        incorrect: { spec: HBAR([{fund:"Alpha",ret:8.4},{fund:"Beta",ret:7.1},{fund:"Gamma",ret:9.6},{fund:"Delta",ret:5.8},{fund:"Epsilon",ret:11.2}], "fund", "ret", "Quarterly return (%)", {format:".1f"}, {sort:null}),
+                     nl: "Returns plotted with funds on the y-axis.",
+                     metrics: M({axisAcc:50, factual:50, insightful:20, assumptions:0, overallViz:93, overallNL:23}, {
+                       axisAcc:"Axes swapped: data integrity preserved, but orientation contradicts user intent. 0.5× score.",
+                       factual:"Description doesn't acknowledge the swap.",
+                       insightful:"No content.",
+                       assumptions:"No disclosure."}) }
+      },
+      "V4-1": {
+        correct:   { spec: VBAR([{c:"Welcome",rate:0.42},{c:"Promo",rate:0.28},{c:"Reactivation",rate:0.19},{c:"Newsletter",rate:0.36},{c:"Abandoned",rate:0.51}], "c", "rate", "Open rate", {yScale:{domainMin:0},xAxis:{labelAngle:-25,labelFontSize:8}}),
+                     nl: "Open rates by campaign. Abandoned-cart highest at 51%, Reactivation lowest at 19%. Y-axis at 0.",
+                     metrics: M({insightful:50, assumptions:85, overallNL:85}, {
+                       insightful:"Names winners/losers; doesn't unpack drivers.",
+                       assumptions:"Implies all campaigns; no time window."}) },
+        partial:   { spec: VBAR([{c:"Welcome",rate:0.42},{c:"Promo",rate:0.28},{c:"Reactivation",rate:0.19},{c:"Newsletter",rate:0.36},{c:"Abandoned",rate:0.51}], "c", "rate", "Open rate", {yScale:{domain:[0.15,0.55]},xAxis:{labelAngle:-25,labelFontSize:8}}),
+                     nl: "Open rates show big differences between campaigns.",
+                     metrics: M({axisAcc:70, factual:60, insightful:30, assumptions:30, overallViz:96, overallNL:40}, {
+                       axisAcc:"Y starts at 15% — small differences look dramatic. Truncated baseline = 0.7× score.",
+                       factual:"Implies bigger spread than the data warrants.",
+                       insightful:"Misleading framing.",
+                       assumptions:"Doesn't disclose the truncated axis."}) },
+        incorrect: { spec: HBAR([{c:"Abandoned",rate:0.51},{c:"Newsletter",rate:0.36},{c:"Promo",rate:0.28},{c:"Reactivation",rate:0.19},{c:"Welcome",rate:0.42}], "c", "rate", "Rate", {}, {sort:null}),
+                     nl: "Open rates listed by campaign.",
+                     metrics: M({axisAcc:30, factual:40, insightful:15, assumptions:0, overallViz:90, overallNL:18}, {
+                       axisAcc:"Campaigns ordered alphabetically; X-axis title is just 'Rate' — units missing.",
+                       factual:"Text doesn't help interpret rates.",
+                       insightful:"No analysis.",
+                       assumptions:"None."}) }
+      },
+      "V4-2": {
+        correct:   { spec: VBAR([{sev:"Mild",n:140},{sev:"Moderate",n:62},{sev:"Severe",n:18}], "sev", "n", "Adverse event count", {yScale:{domainMin:0}}),
+                     nl: "Adverse events by severity. Mild 140, Moderate 62, Severe 18. Severity ordered Mild→Severe with 0 baseline.",
+                     metrics: M({insightful:55, assumptions:85, overallNL:88}, {
+                       insightful:"States the gradient; doesn't comment on dose-relationship.",
+                       assumptions:"Severity scale implied."}) },
+        partial:   { spec: HBAR([{sev:"Mild",n:140},{sev:"Moderate",n:62},{sev:"Severe",n:18}], "sev", "n", "Adverse event count", {}, {sort:null}),
+                     nl: "Adverse event counts shown by severity, with severity on the y-axis.",
+                     metrics: M({axisAcc:50, factual:75, insightful:40, assumptions:80, overallViz:93, overallNL:65}, {
+                       axisAcc:"Axes swapped: data still readable but unconventional for ordinal severity. 0.5× score.",
+                       factual:"Counts are accurate.",
+                       insightful:"Mostly descriptive.",
+                       assumptions:"Severity scale implied."}) },
+        incorrect: { spec: SCAT([{sev:1,n:140},{sev:2,n:62},{sev:3,n:18}], "sev", "n", "Severity (1–3)", "Count"),
+                     nl: "Adverse events plotted by severity.",
+                     metrics: M({axisAcc:20, factual:35, insightful:15, assumptions:0, overallViz:89, overallNL:17}, {
+                       axisAcc:"Severity treated as continuous — interpolating between Mild/Moderate/Severe is meaningless.",
+                       factual:"Numbers correct but axis type misleads.",
+                       insightful:"None.",
+                       assumptions:"No disclosure."}) }
+      },
+      "V4-3": {
+        correct:   { spec: VBAR([{a:"Aisha",csat:4.6},{a:"Ben",csat:4.2},{a:"Carla",csat:4.8},{a:"Dev",csat:3.9},{a:"Elena",csat:4.4}], "a", "csat", "CSAT (1–5)", {yScale:{domain:[0,5]},xAxis:{labelFontSize:9}}),
+                     nl: "CSAT by agent. Carla highest at 4.8, Dev lowest at 3.9. Y-axis spans 0–5.",
+                     metrics: M({insightful:50, assumptions:85, overallNL:85}, {
+                       insightful:"Names extremes; doesn't link to volume or training.",
+                       assumptions:"Scale implied."}) },
+        partial:   { spec: VBAR([{a:"Aisha",csat:4.6},{a:"Ben",csat:4.2},{a:"Carla",csat:4.8},{a:"Dev",csat:3.9},{a:"Elena",csat:4.4}], "a", "csat", "CSAT (1–5)", {yScale:{domain:[3.5,5]},xAxis:{labelFontSize:9}}),
+                     nl: "CSAT varies notably across agents.",
+                     metrics: M({axisAcc:70, factual:60, insightful:30, assumptions:30, overallViz:96, overallNL:40}, {
+                       axisAcc:"Y starts at 3.5 — agents look much more different than they are. 0.7× score.",
+                       factual:"'Notably' overstates differences.",
+                       insightful:"Misleading.",
+                       assumptions:"Doesn't disclose truncated axis."}) },
+        incorrect: { spec: SCAT([{id:1,csat:4.6},{id:2,csat:4.2},{id:3,csat:4.8},{id:4,csat:3.9},{id:5,csat:4.4}], "id", "csat", "Agent ID", "CSAT"),
+                     nl: "CSAT plotted against agent identifier.",
+                     metrics: M({axisAcc:20, factual:30, insightful:15, assumptions:0, overallViz:89, overallNL:15}, {
+                       axisAcc:"Agent ID on a continuous axis introduces meaningless distance between agents.",
+                       factual:"Doesn't describe per-agent performance meaningfully.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+
+      // ── V5 · Audit filter accuracy ──────────────────────────────────────
+      "V5-0": {
+        correct:   { spec: HBAR([{rep:"Sarah Chen",rev:128000},{rep:"Marcus Wong",rev:104000},{rep:"Priya Patel",rev:96000},{rep:"James Liu",rev:88000},{rep:"Linda Garcia",rev:72000}], "rep", "rev", "Q4 closed-won ($)", {format:"$,.0f"}),
+                     nl: "Q4 closed-won deals by rep. Filtered to Stage = Closed Won AND Close Date in Q4. No other filters.",
+                     metrics: M({insightful:50, assumptions:95, overallNL:90}, {
+                       insightful:"Names leader; could compare to quota or pipeline.",
+                       assumptions:"Filters explicit."}) },
+        partial:   { spec: HBAR([{rep:"You",rev:42000}], "rep", "rev", "Q4 closed-won ($)", {format:"$,.0f"}),
+                     nl: "Closed-won deals in Q4 totaling $42K.",
+                     metrics: M({filterAcc:50, factual:50, insightful:20, assumptions:30, overallViz:93, overallNL:33}, {
+                       filterAcc:"Silent owner=you filter added. Only your deals shown — team excluded.",
+                       factual:"Reader assumes team-wide; data is just one rep.",
+                       insightful:"No team comparison.",
+                       assumptions:"Doesn't disclose owner filter."}) },
+        incorrect: { spec: HBAR([{rep:"Sarah Chen",rev:512000},{rep:"Marcus Wong",rev:445000},{rep:"Priya Patel",rev:398000},{rep:"James Liu",rev:362000},{rep:"Linda Garcia",rev:298000}], "rep", "rev", "Closed-won ($) — all time", {format:"$,.0f"}),
+                     nl: "Closed-won totals by rep.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Required Q4 date filter missing — totals are all-time, not the asked-for quarter.",
+                       factual:"Numbers don't match Q4 question.",
+                       insightful:"None.",
+                       assumptions:"No disclosure that the date filter was dropped."}) }
+      },
+      "V5-1": {
+        correct:   { spec: HBAR([{prod:"Laptop Pro",ret:84},{prod:"Phone X",ret:62},{prod:"Tablet Air",ret:48},{prod:"Headphones",ret:31},{prod:"Smart TV",ret:22}], "prod", "ret", "Returns (Mar 2026)"),
+                     nl: "Returns for Electronics in March 2026, top 5 products. Filters: Category = Electronics AND Date = March 2026.",
+                     metrics: M({insightful:50, assumptions:95, overallNL:90}, {
+                       insightful:"Lists products; no driver analysis.",
+                       assumptions:"Filters explicit."}) },
+        partial:   { spec: HBAR([{prod:"Laptop Pro",ret:18},{prod:"Phone X",ret:14},{prod:"Tablet Air",ret:11}], "prod", "ret", "Returns (Mar, Flagship store)"),
+                     nl: "Electronics returns in March from the flagship store.",
+                     metrics: M({filterAcc:50, factual:60, insightful:20, assumptions:30, overallViz:93, overallNL:37}, {
+                       filterAcc:"Silent Store = Flagship filter added. Misses 14 other locations.",
+                       factual:"Volume far below true March electronics returns; reader can't tell.",
+                       insightful:"No location comparison.",
+                       assumptions:"Doesn't disclose store filter."}) },
+        incorrect: { spec: HBAR([{prod:"Laptop Pro",ret:1840},{prod:"Phone X",ret:1620},{prod:"Tablet Air",ret:1480},{prod:"Headphones",ret:1110},{prod:"Smart TV",ret:840}], "prod", "ret", "Returns (all time)"),
+                     nl: "Top returned electronics products.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Required March 2026 date filter missing — 3 years of data.",
+                       factual:"Reader expects this month, gets cumulative.",
+                       insightful:"None.",
+                       assumptions:"No disclosure."}) }
+      },
+      "V5-2": {
+        correct:   { spec: HBAR([{prog:"MS Computer Science",e:124},{prog:"MS Business",e:108},{prog:"MS Biology",e:92},{prog:"MS English",e:54},{prog:"MS History",e:38}], "prog", "e", "Graduate enrollment"),
+                     nl: "Graduate enrollment by program. All graduate programs included; Level = Graduate.",
+                     metrics: M({insightful:50, assumptions:95, overallNL:90}, {
+                       insightful:"Lists programs; no growth comparison.",
+                       assumptions:"Filter explicit."}) },
+        partial:   { spec: HBAR([{prog:"MS Computer Science",e:124},{prog:"MS Computer Engineering",e:42}], "prog", "e", "Engineering graduate enrollment"),
+                     nl: "Graduate enrollment in engineering programs.",
+                     metrics: M({filterAcc:50, factual:50, insightful:20, assumptions:30, overallViz:93, overallNL:33}, {
+                       filterAcc:"Adds Dept = Engineering carried over from earlier turn — user asked for all graduate programs.",
+                       factual:"Subset shown; reader expects all programs.",
+                       insightful:"No cross-department view.",
+                       assumptions:"Doesn't disclose carryover filter."}) },
+        incorrect: { spec: HBAR([{prog:"BS Computer Science",e:412},{prog:"BS Business",e:389},{prog:"MS Computer Science",e:124},{prog:"BS Biology",e:298},{prog:"MS Business",e:108}], "prog", "e", "Enrollment (all levels)"),
+                     nl: "Top programs by enrollment.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Required Level = Graduate filter missing — undergrads dominate.",
+                       factual:"Mostly bachelors-level when user asked for grad.",
+                       insightful:"None.",
+                       assumptions:"No disclosure."}) }
+      },
+      "V5-3": {
+        correct:   { spec: VBAR([{m:"Jan",adm:42},{m:"Feb",adm:38},{m:"Mar",adm:51}], "m", "adm", "ICU admissions, age >65"),
+                     nl: "ICU admissions for patients over 65. Filters: Unit = ICU AND Age > 65.",
+                     metrics: M({insightful:50, assumptions:95, overallNL:90}, {
+                       insightful:"Lists monthly counts; no trend interpretation.",
+                       assumptions:"Filters explicit."}) },
+        partial:   { spec: VBAR([{m:"Jan",adm:18},{m:"Feb",adm:15},{m:"Mar",adm:22}], "m", "adm", "Cardiac ICU >65 admissions"),
+                     nl: "ICU admissions for patients over 65.",
+                     metrics: M({filterAcc:50, factual:50, insightful:20, assumptions:30, overallViz:93, overallNL:33}, {
+                       filterAcc:"Silent Diagnosis = Cardiac filter applied — only cardiac ICU shown.",
+                       factual:"Counts are subset of true ICU admissions.",
+                       insightful:"No diagnosis comparison.",
+                       assumptions:"Doesn't disclose diagnosis filter."}) },
+        incorrect: { spec: VBAR([{m:"Jan",adm:128},{m:"Feb",adm:114},{m:"Mar",adm:142}], "m", "adm", "All ICU admissions"),
+                     nl: "ICU admissions over the last three months.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Required Age >65 filter missing — all ages included.",
+                       factual:"Inflated counts vs. the over-65 population requested.",
+                       insightful:"None.",
+                       assumptions:"No disclosure."}) }
+      },
+
+      // ── V6 · Confirm sort order ─────────────────────────────────────────
+      "V6-0": {
+        correct:   { spec: HBAR([{c:"Abandoned-cart",cv:0.42},{c:"Welcome",cv:0.31},{c:"Promo",cv:0.24},{c:"Newsletter",cv:0.18},{c:"Reactivation",cv:0.12}], "c", "cv", "Conversion rate", {format:".0%"}),
+                     nl: "Top 5 campaigns by conversion rate, sorted descending. Abandoned-cart leads at 42%.",
+                     metrics: M({insightful:50, assumptions:90, overallNL:88}, {
+                       insightful:"Names leader; no commentary on tactic patterns.",
+                       assumptions:"States 'top 5' and ordering."}) },
+        partial:   { spec: HBAR([{c:"Reactivation",cv:0.12},{c:"Newsletter",cv:0.18},{c:"Promo",cv:0.24},{c:"Welcome",cv:0.31},{c:"Abandoned-cart",cv:0.42}], "c", "cv", "Conversion rate", {format:".0%"}, {sort:"x"}),
+                     nl: "Five campaigns ranked by conversion rate.",
+                     metrics: M({sortAcc:50, factual:40, insightful:20, assumptions:30, overallViz:93, overallNL:30}, {
+                       sortAcc:"Right field, wrong direction: ascending shows the lowest 5, not the top 5.",
+                       factual:"Reader expects top performers; sees opposite.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose direction inversion."}) },
+        incorrect: { spec: HBAR([{c:"Abandoned-cart",cv:0.42},{c:"Newsletter",cv:0.18},{c:"Promo",cv:0.24},{c:"Reactivation",cv:0.12},{c:"Welcome",cv:0.31}], "c", "cv", "Conversion rate", {format:".0%"}, {sort:null}),
+                     nl: "Campaign conversion rates listed alphabetically.",
+                     metrics: M({sortAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       sortAcc:"Alphabetical order ignores the user's explicit 'top N' ranking request.",
+                       factual:"Hard to identify top performers from the visual.",
+                       insightful:"None.",
+                       assumptions:"No disclosure."}) }
+      },
+      "V6-1": {
+        correct:   { spec: HBAR([{a:"Dev",csat:3.2},{a:"Ben",csat:3.7},{a:"Elena",csat:4.0},{a:"Aisha",csat:4.3},{a:"Carla",csat:4.6}], "a", "csat", "CSAT", {format:".1f"}, {sort:"x"}),
+                     nl: "Worst-performing agents by CSAT, ascending. Dev lowest at 3.2.",
+                     metrics: M({insightful:50, assumptions:90, overallNL:88}, {
+                       insightful:"Names lowest performer; no coaching framing.",
+                       assumptions:"Sort direction explicit."}) },
+        partial:   { spec: HBAR([{a:"Carla",csat:4.6},{a:"Aisha",csat:4.3},{a:"Elena",csat:4.0},{a:"Ben",csat:3.7},{a:"Dev",csat:3.2}], "a", "csat", "CSAT", {format:".1f"}),
+                     nl: "Agents ranked by CSAT.",
+                     metrics: M({sortAcc:50, factual:30, insightful:20, assumptions:30, overallViz:93, overallNL:27}, {
+                       sortAcc:"Descending — best agents shown when 'worst' was asked. Direction inverted.",
+                       factual:"Top performers shown for a 'worst' question.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose direction."}) },
+        incorrect: { spec: HBAR([{a:"Aisha",csat:4.3},{a:"Ben",csat:3.7},{a:"Carla",csat:4.6},{a:"Dev",csat:3.2},{a:"Elena",csat:4.0}], "a", "csat", "CSAT", {format:".1f"}, {sort:null}),
+                     nl: "CSAT scores listed by agent.",
+                     metrics: M({sortAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       sortAcc:"Alphabetical order — CSAT not used as a sort key at all.",
+                       factual:"Worst agent isn't visually obvious.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V6-2": {
+        correct:   { spec: HBAR([{a:"Acct M",g:-0.18},{a:"Acct L",g:-0.14},{a:"Acct K",g:-0.09},{a:"Acct J",g:-0.05},{a:"Acct I",g:-0.02},{a:"Acct H",g:0.01},{a:"Acct G",g:0.04},{a:"Acct F",g:0.07},{a:"Acct E",g:0.09},{a:"Acct D",g:0.11}], "a", "g", "Revenue growth", {format:".0%"}, {sort:"x"}),
+                     nl: "Bottom 10 accounts by revenue growth, ascending. Acct M lowest at −18%.",
+                     metrics: M({insightful:50, assumptions:90, overallNL:88}, {
+                       insightful:"Lists laggards; no churn-risk framing.",
+                       assumptions:"Sort direction stated."}) },
+        partial:   { spec: HBAR([{a:"Acct A",g:0.42},{a:"Acct B",g:0.38},{a:"Acct C",g:0.31},{a:"Acct D",g:0.28},{a:"Acct E",g:0.22}], "a", "g", "Revenue growth", {format:".0%"}),
+                     nl: "Accounts ranked by revenue growth.",
+                     metrics: M({sortAcc:50, factual:30, insightful:20, assumptions:30, overallViz:93, overallNL:27}, {
+                       sortAcc:"Descending — top growers shown when 'bottom' was asked.",
+                       factual:"Wrong end of the distribution.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose direction."}) },
+        incorrect: { spec: HBAR([{a:"Acct A",g:0.42},{a:"Acct B",g:0.38},{a:"Acct C",g:0.31},{a:"Acct D",g:0.28},{a:"Acct E",g:0.22}], "a", "g", "Revenue growth", {format:".0%"}, {sort:null}),
+                     nl: "Account revenue growth listed.",
+                     metrics: M({sortAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       sortAcc:"Sorted by Account Name; growth not used as the ranking field.",
+                       factual:"Bottom 10 invisible.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V6-3": {
+        correct:   { spec: HBAR([{site:"Site 7",rate:8.4},{site:"Site 12",rate:7.1},{site:"Site 3",rate:6.6},{site:"Site 9",rate:5.8},{site:"Site 1",rate:4.9}], "site", "rate", "Patients/month enrolled"),
+                     nl: "Sites ranked by enrollment speed, descending. Site 7 fastest at 8.4 patients/month.",
+                     metrics: M({insightful:55, assumptions:90, overallNL:88}, {
+                       insightful:"Names fastest; could call out under-performers' gap.",
+                       assumptions:"Rate explicit."}) },
+        partial:   { spec: HBAR([{site:"Site 12",total:480},{site:"Site 3",total:412},{site:"Site 1",total:380},{site:"Site 7",total:340},{site:"Site 9",total:298}], "site", "total", "Total enrollment"),
+                     nl: "Sites ranked by total enrollment.",
+                     metrics: M({sortAcc:50, fieldSim:80, factual:50, insightful:30, assumptions:30, overallViz:90, overallNL:37}, {
+                       sortAcc:"Sorts by total enrollment, not by rate — large slow sites rank artificially high.",
+                       fieldSim:"Total volume vs. per-month rate.",
+                       factual:"Misrepresents 'speed.'",
+                       insightful:"No rate-vs-total contrast.",
+                       assumptions:"Doesn't disclose substitution."}) },
+        incorrect: { spec: HBAR([{site:"Site 1",rate:4.9},{site:"Site 12",rate:7.1},{site:"Site 3",rate:6.6},{site:"Site 7",rate:8.4},{site:"Site 9",rate:5.8}], "site", "rate", "Patients/month", {}, {sort:null}),
+                     nl: "Sites listed in ID order.",
+                     metrics: M({sortAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       sortAcc:"No ranking despite 'rank' in the request — site-ID order.",
+                       factual:"Speed-leader invisible.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+
+      // ── V7 · Evaluate visual encodings ──────────────────────────────────
+      "V7-0": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{r:"East",cat:"Tech",s:42},{r:"East",cat:"Apparel",s:28},{r:"West",cat:"Tech",s:55},{r:"West",cat:"Apparel",s:34},{r:"North",cat:"Tech",s:31},{r:"North",cat:"Apparel",s:22},{r:"South",cat:"Tech",s:38},{r:"South",cat:"Apparel",s:30}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"r",type:"nominal",title:null,axis:{labelFontSize:9}},y:{field:"s",type:"quantitative",title:"Sales",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"cat",type:"nominal",scale:{range:["#1896FF","#FF784F"]},legend:{labelFontSize:8,titleFontSize:8}}} },
+                     nl: "Sales by region, colored by category. Tech (blue) and Apparel (orange) distinguishable across regions.",
+                     metrics: M({insightful:55, assumptions:85, overallNL:88}, {
+                       insightful:"Names channels; could call out West/Tech as the standout combo.",
+                       assumptions:"Color mapping stated."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{r:"East",cat:"Tech",s:42},{r:"East",cat:"Apparel",s:28},{r:"West",cat:"Tech",s:55},{r:"West",cat:"Apparel",s:34},{r:"North",cat:"Tech",s:31},{r:"North",cat:"Apparel",s:22},{r:"South",cat:"Tech",s:38},{r:"South",cat:"Apparel",s:30}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"r",type:"nominal",title:null,axis:{labelFontSize:9}},y:{field:"s",type:"quantitative",title:"Sales",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"cat",type:"nominal",scale:{scheme:"blues"},legend:{labelFontSize:8,titleFontSize:8}}} },
+                     nl: "Sales by region, with categories distinguished by color shade.",
+                     metrics: M({visEnc:70, factual:75, insightful:40, assumptions:50, overallViz:96, overallNL:55}, {
+                       visEnc:"Sequential blues palette implies an ordering between Tech and Apparel; categorical hues would be appropriate.",
+                       factual:"Description glosses over the encoding mismatch.",
+                       insightful:"Lacks segment narrative.",
+                       assumptions:"Doesn't flag palette mismatch."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{r:"East",cat:"Tech",s:42,id:1},{r:"East",cat:"Apparel",s:28,id:2},{r:"West",cat:"Tech",s:55,id:3},{r:"West",cat:"Apparel",s:34,id:4},{r:"North",cat:"Tech",s:31,id:5},{r:"North",cat:"Apparel",s:22,id:6},{r:"South",cat:"Tech",s:38,id:7},{r:"South",cat:"Apparel",s:30,id:8}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"r",type:"nominal",title:null,axis:{labelFontSize:9}},y:{field:"s",type:"quantitative",title:"Sales",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"id",type:"nominal",legend:null}} },
+                     nl: "Sales by region.",
+                     metrics: M({visEnc:0, factual:40, insightful:15, assumptions:0, overallViz:86, overallNL:18}, {
+                       visEnc:"Color mapped to row ID — every bar a different hue with no semantic meaning.",
+                       factual:"Doesn't acknowledge encoding mismatch.",
+                       insightful:"No category narrative.",
+                       assumptions:"None."}) }
+      },
+      "V7-1": {
+        correct:   { spec: SCAT([{h:"H1",vol:8400,r:9.2},{h:"H2",vol:5200,r:7.8},{h:"H3",vol:3100,r:11.4},{h:"H4",vol:9600,r:6.5},{h:"H5",vol:2400,r:13.1},{h:"H6",vol:7100,r:8.0}], "vol", "r", "Volume (admissions)", "Readmission rate (%)", {color2:{field:"h",type:"nominal",legend:{labelFontSize:8}}}),
+                     nl: "Readmission rate vs. admission volume across six hospitals. High-volume hospitals trend lower (better) on rate.",
+                     metrics: M({insightful:65, assumptions:90, overallNL:92}, {
+                       insightful:"Identifies inverse relationship; could quantify the slope.",
+                       assumptions:"Encodings explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{h:"H1",vol:8400,r:9.2,letters:1},{h:"H2",vol:5200,r:7.8,letters:1},{h:"H3",vol:3100,r:11.4,letters:1},{h:"H4",vol:9600,r:6.5,letters:1},{h:"H5",vol:2400,r:13.1,letters:1},{h:"H6",vol:7100,r:8.0,letters:1}]},
+                     mark:{type:"point",filled:true,color:"#1896FF"},
+                     encoding:{x:{field:"vol",type:"quantitative",title:"Volume",axis:{titleFontSize:9,labelFontSize:8}},y:{field:"r",type:"quantitative",title:"Readmission %",axis:{titleFontSize:9,labelFontSize:8}},size:{field:"h",type:"nominal",legend:{labelFontSize:7}}} },
+                     nl: "Hospital readmission rates vs. volume.",
+                     metrics: M({visEnc:40, factual:50, insightful:30, assumptions:40, overallViz:91, overallNL:40}, {
+                       visEnc:"Size mapped to hospital name (nominal) — different sizes have no quantitative meaning.",
+                       factual:"Description doesn't flag the misuse of size.",
+                       insightful:"Misses the key relationship.",
+                       assumptions:"Doesn't disclose encoding."}) },
+        incorrect: { spec: SCAT([{h:"H1",vol:8400,r:9.2},{h:"H2",vol:5200,r:7.8},{h:"H3",vol:3100,r:11.4},{h:"H4",vol:9600,r:6.5},{h:"H5",vol:2400,r:13.1},{h:"H6",vol:7100,r:8.0}], "vol", "r", "Volume", "Rate %"),
+                     nl: "Readmission rate vs. volume across hospitals.",
+                     metrics: M({visEnc:0, factual:40, insightful:15, assumptions:0, overallViz:86, overallNL:18}, {
+                       visEnc:"No size encoding despite the user explicitly asking for size = volume.",
+                       factual:"Description omits size entirely.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V7-2": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{stage:"Prospect",p:0.10,n:120},{stage:"Qualify",p:0.30,n:88},{stage:"Propose",p:0.55,n:54},{stage:"Negotiate",p:0.75,n:32},{stage:"Close",p:0.92,n:18}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Prospect","Qualify","Propose","Negotiate","Close"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Pipeline (count)",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"p",type:"quantitative",scale:{scheme:"blues"},legend:{labelFontSize:7,titleFontSize:8,title:"Probability"}}} },
+                     nl: "Pipeline by stage, colored by win probability (sequential blue). Darker = higher probability.",
+                     metrics: M({insightful:60, assumptions:90, overallNL:90}, {
+                       insightful:"Stage progression visible; could comment on funnel drop-off.",
+                       assumptions:"Encoding choice explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{stage:"Prospect",p:"10%",n:120},{stage:"Qualify",p:"30%",n:88},{stage:"Propose",p:"55%",n:54},{stage:"Negotiate",p:"75%",n:32},{stage:"Close",p:"92%",n:18}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Prospect","Qualify","Propose","Negotiate","Close"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Pipeline (count)",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"p",type:"nominal",legend:{labelFontSize:7,titleFontSize:8,title:"Prob"}}} },
+                     nl: "Pipeline by stage, with stages distinguished by color.",
+                     metrics: M({visEnc:70, factual:60, insightful:40, assumptions:50, overallViz:96, overallNL:50}, {
+                       visEnc:"Probability is quantitative but encoded with categorical hues — ordering is lost.",
+                       factual:"Description doesn't flag the encoding type mismatch.",
+                       insightful:"Stage narrative weak.",
+                       assumptions:"Doesn't disclose encoding choice."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{stage:"Prospect",owner:"A",n:60},{stage:"Prospect",owner:"B",n:60},{stage:"Qualify",owner:"A",n:48},{stage:"Qualify",owner:"B",n:40},{stage:"Propose",owner:"A",n:32},{stage:"Propose",owner:"B",n:22}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Prospect","Qualify","Propose"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Pipeline",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"owner",type:"nominal",legend:{labelFontSize:8,titleFontSize:8}}} },
+                     nl: "Pipeline by stage, colored by owner.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"Color mapped to owner — ignores the requested probability encoding entirely.",
+                       factual:"Description confirms the wrong encoding without flagging it.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V7-3": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:Array.from({length:30},(_,i)=>({gpa:2.5+Math.random()*1.5,sat:1100+Math.round(Math.random()*450),prog:["CS","Bio","Bus","Eng"][i%4]}))},
+                     mark:{type:"point",filled:true,size:55},
+                     encoding:{x:{field:"gpa",type:"quantitative",title:"GPA",axis:{titleFontSize:9,labelFontSize:8}},y:{field:"sat",type:"quantitative",title:"SAT",axis:{titleFontSize:9,labelFontSize:8}},shape:{field:"prog",type:"nominal",legend:{labelFontSize:7,titleFontSize:8}},color:{field:"prog",type:"nominal",legend:null}} },
+                     nl: "GPA vs SAT across four programs, each program a distinct shape and color.",
+                     metrics: M({insightful:55, assumptions:90, overallNL:88}, {
+                       insightful:"Plot described; doesn't analyze cluster patterns.",
+                       assumptions:"Encoding stated."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:Array.from({length:30},(_,i)=>({gpa:2.5+Math.random()*1.5,sat:1100+Math.round(Math.random()*450),prog:["CS","Bio","Bus","Eng","Math","Phys","Hist","Eng2","Psy","Lit","Soc","Geo","Art","Mus","Edu"][i%15]}))},
+                     mark:{type:"point",filled:true,size:55},
+                     encoding:{x:{field:"gpa",type:"quantitative",title:"GPA",axis:{titleFontSize:9,labelFontSize:8}},y:{field:"sat",type:"quantitative",title:"SAT",axis:{titleFontSize:9,labelFontSize:8}},shape:{field:"prog",type:"nominal",legend:{labelFontSize:6,titleFontSize:7}}} },
+                     nl: "GPA vs SAT across many programs, distinguished by shape.",
+                     metrics: M({visEnc:40, factual:50, insightful:25, assumptions:40, overallViz:91, overallNL:38}, {
+                       visEnc:"15 distinct shapes — too many to visually distinguish; perceptual limit ~6.",
+                       factual:"Description doesn't flag the visual overload.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose program count."}) },
+        incorrect: { spec: SCAT(Array.from({length:30},(_,i)=>({gpa:2.5+Math.random()*1.5,sat:1100+Math.round(Math.random()*450)})), "gpa", "sat", "GPA", "SAT"),
+                     nl: "GPA vs SAT plotted as a scatter.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"No shape or color encoding for program — distinction completely lost.",
+                       factual:"Doesn't acknowledge missing encoding.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+
+      // ── V8 · Test interactivity (tooltip described in NL) ───────────────
+      "V8-0": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{cat:"Billing",cases:847,res:4.2},{cat:"Tech support",cases:612,res:6.8},{cat:"Account",cases:498,res:3.1},{cat:"Returns",cases:312,res:5.5}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{y:{field:"cat",type:"nominal",sort:"-x",title:null,axis:{labelFontSize:9}},x:{field:"cases",type:"quantitative",title:"Cases",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"cat",title:"Category"},{field:"cases",title:"Cases"},{field:"res",title:"Avg resolution (hrs)"}]} },
+                     nl: "Cases by category. Hover Billing → Category: Billing • Cases: 847 • Avg resolution: 4.2 hrs. Matches chart.",
+                     metrics: M({insightful:55, assumptions:90, overallNL:88}, {
+                       insightful:"Top category named; could probe time pattern.",
+                       assumptions:"Tooltip behavior described."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{cat:"Billing",cases:847,res:18.5},{cat:"Tech support",cases:612,res:24.3},{cat:"Account",cases:498,res:13.7},{cat:"Returns",cases:312,res:9.8}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{y:{field:"cat",type:"nominal",sort:"-x",title:null,axis:{labelFontSize:9}},x:{field:"cases",type:"quantitative",title:"Cases",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"cat",title:"Category"},{field:"cases",title:"Cases"},{field:"res",title:"Sum resolution (hrs)"}]} },
+                     nl: "Cases by category. Tooltip shows Cases (correct) and Sum of resolution time (instead of Average).",
+                     metrics: M({visEnc:60, factual:60, insightful:30, assumptions:40, overallViz:94, overallNL:43}, {
+                       visEnc:"Tooltip shows Sum, not Average — wrong aggregation in the on-demand value.",
+                       factual:"NL acknowledges issue but doesn't quantify impact.",
+                       insightful:"None.",
+                       assumptions:"Partially disclosed."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{cat:"Billing",cases:847,opp:412000},{cat:"Tech support",cases:612,opp:298000},{cat:"Account",cases:498,opp:185000},{cat:"Returns",cases:312,opp:142000}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{y:{field:"cat",type:"nominal",sort:"-x",title:null,axis:{labelFontSize:9}},x:{field:"cases",type:"quantitative",title:"Cases",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"cat",title:"Category"},{field:"opp",title:"Opportunity Amount ($)"}]} },
+                     nl: "Cases by category. Tooltip shows Opportunity Amount — from a different datasource.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"Tooltip pulled from the wrong datasource — values unrelated to support cases.",
+                       factual:"Description names the issue but the chart is broken.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V8-1": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{dose:10,resp:0.18,n:42,lo:0.10,hi:0.28},{dose:25,resp:0.34,n:58,lo:0.24,hi:0.45},{dose:50,resp:0.62,n:84,lo:0.51,hi:0.73},{dose:100,resp:0.78,n:71,lo:0.68,hi:0.86},{dose:200,resp:0.85,n:39,lo:0.74,hi:0.92}]},
+                     mark:{type:"line",color:"#1896FF",point:true},
+                     encoding:{x:{field:"dose",type:"quantitative",title:"Dose (mg)",axis:{titleFontSize:9,labelFontSize:8}},y:{field:"resp",type:"quantitative",title:"Response rate",axis:{titleFontSize:9,labelFontSize:8,format:".0%"}},tooltip:[{field:"dose",title:"Dose (mg)"},{field:"resp",title:"Response",format:".0%"},{field:"n",title:"n"},{field:"lo",title:"95% CI low",format:".2f"},{field:"hi",title:"95% CI high",format:".2f"}]} },
+                     nl: "Dose-response curve. Hover 50mg → Dose: 50mg • Response: 62% • n=84 • CI: 0.51–0.73.",
+                     metrics: M({insightful:65, assumptions:90, overallNL:92}, {
+                       insightful:"Curve described; tooltip surfaces n and CI per point.",
+                       assumptions:"Tooltip fields explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{dose:10,resp:0.18},{dose:25,resp:0.34},{dose:50,resp:0.62},{dose:100,resp:0.78},{dose:200,resp:0.85}]},
+                     mark:{type:"line",color:"#1896FF",point:true},
+                     encoding:{x:{field:"dose",type:"quantitative",title:"Dose (mg)",axis:{titleFontSize:9,labelFontSize:8}},y:{field:"resp",type:"quantitative",title:"Response rate",axis:{titleFontSize:9,labelFontSize:8,format:".0%"}},tooltip:[{field:"dose",title:"Dose"},{field:"resp",title:"Response",format:".0%"}]} },
+                     nl: "Dose-response curve. Tooltip shows Dose and Response only — n and CI omitted.",
+                     metrics: M({visEnc:60, factual:75, insightful:40, assumptions:60, overallViz:94, overallNL:58}, {
+                       visEnc:"Tooltip omits sample size and confidence interval — partial coverage.",
+                       factual:"NL acknowledges the gap.",
+                       insightful:"Lacks CI commentary.",
+                       assumptions:"Partially explicit."}) },
+        incorrect: { spec: LINE([{dose:10,resp:0.18},{dose:25,resp:0.34},{dose:50,resp:0.62},{dose:100,resp:0.78},{dose:200,resp:0.85}], "dose", "resp", {xType:"quantitative",xTitle:"Dose (mg)",yTitle:"Response"}),
+                     nl: "Dose-response curve with no tooltip — points unidentifiable on hover.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"No tooltip at all — interactive affordance missing.",
+                       factual:"Acknowledges absence.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V8-2": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{sec:"Tech",alloc:0.283,val:4200000,bench:0.251},{sec:"Healthcare",alloc:0.198,val:2940000,bench:0.184},{sec:"Financials",alloc:0.142,val:2110000,bench:0.158},{sec:"Energy",alloc:0.094,val:1395000,bench:0.105},{sec:"Utilities",alloc:0.058,val:861000,bench:0.072},{sec:"Cash",alloc:0.225,val:3340000,bench:0.230}]},
+                     mark:{type:"arc",innerRadius:30},
+                     encoding:{theta:{field:"alloc",type:"quantitative"},color:{field:"sec",type:"nominal",legend:{labelFontSize:7,titleFontSize:8}},tooltip:[{field:"sec",title:"Sector"},{field:"alloc",title:"Allocation",format:".1%"},{field:"val",title:"Value",format:"$,.0f"},{field:"bench",title:"Benchmark",format:".1%"}]} },
+                     nl: "Portfolio allocation. Hover Tech → Tech • 28.3% • $4.2M • Benchmark: 25.1%. All correct.",
+                     metrics: M({insightful:55, assumptions:90, overallNL:88}, {
+                       insightful:"Names overweight position vs. benchmark; could quantify drift.",
+                       assumptions:"Tooltip fields explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{sec:"Tech",alloc:0.283,n:24},{sec:"Healthcare",alloc:0.198,n:18},{sec:"Financials",alloc:0.142,n:14},{sec:"Energy",alloc:0.094,n:9},{sec:"Utilities",alloc:0.058,n:6},{sec:"Cash",alloc:0.225,n:3}]},
+                     mark:{type:"arc",innerRadius:30},
+                     encoding:{theta:{field:"alloc",type:"quantitative"},color:{field:"sec",type:"nominal",legend:{labelFontSize:7,titleFontSize:8}},tooltip:[{field:"sec",title:"Sector"},{field:"alloc",title:"%",format:".1%"},{field:"n",title:"Holdings (count)"}]} },
+                     nl: "Portfolio allocation. Tooltip shows holdings count instead of $ value.",
+                     metrics: M({visEnc:60, factual:60, insightful:30, assumptions:40, overallViz:94, overallNL:43}, {
+                       visEnc:"Tooltip shows count of holdings rather than dollar value.",
+                       factual:"NL flags the issue.",
+                       insightful:"None.",
+                       assumptions:"Partially explicit."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{sec:"Tech",alloc:0.283,prev:0.310},{sec:"Healthcare",alloc:0.198,prev:0.215},{sec:"Financials",alloc:0.142,prev:0.130},{sec:"Energy",alloc:0.094,prev:0.085},{sec:"Utilities",alloc:0.058,prev:0.060},{sec:"Cash",alloc:0.225,prev:0.200}]},
+                     mark:{type:"arc",innerRadius:30},
+                     encoding:{theta:{field:"alloc",type:"quantitative"},color:{field:"sec",type:"nominal",legend:{labelFontSize:7,titleFontSize:8}},tooltip:[{field:"sec",title:"Sector"},{field:"prev",title:"Allocation (Q3, prior)",format:".1%"}]} },
+                     nl: "Portfolio allocation. Tooltip surfaces previous-quarter values — stale, contradicts current chart.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"Tooltip pulls stale data; what's hovered doesn't match the bar drawn.",
+                       factual:"NL flags it but the visual trust is broken.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "V8-3": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{stage:"Visit",n:42000,cv:0.082},{stage:"MQL",n:1240,cv:0.34},{stage:"SQL",n:421,cv:0.42},{stage:"Opp",n:178,cv:0.55},{stage:"Won",n:98,cv:1.0}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Visit","MQL","SQL","Opp","Won"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Count",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"stage",title:"Stage"},{field:"n",title:"Count",format:","},{field:"cv",title:"Conversion to next",format:".0%"}]} },
+                     nl: "Funnel by stage. Hover MQL → MQL • Count: 1,240 • Conversion: 34%.",
+                     metrics: M({insightful:55, assumptions:90, overallNL:88}, {
+                       insightful:"Funnel described; could call out the SQL→Opp drop.",
+                       assumptions:"Tooltip fields explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{stage:"Visit",n:42000},{stage:"MQL",n:1240},{stage:"SQL",n:421},{stage:"Opp",n:178},{stage:"Won",n:98}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Visit","MQL","SQL","Opp","Won"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Count",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"stage",title:"Stage"},{field:"n",title:"Count",format:","}]} },
+                     nl: "Funnel by stage. Tooltip shows count only — conversion rate per stage missing.",
+                     metrics: M({visEnc:60, factual:75, insightful:40, assumptions:60, overallViz:94, overallNL:58}, {
+                       visEnc:"Tooltip omits the conversion rate that's the analytical point of a funnel.",
+                       factual:"NL acknowledges the gap.",
+                       insightful:"Misses drop-off.",
+                       assumptions:"Partially explicit."}) },
+        incorrect: { spec: { $schema:SCHEMA, data:{values:[{stage:"Visit",n:42000},{stage:"MQL",n:1240},{stage:"SQL",n:421},{stage:"Opp",n:178},{stage:"Won",n:98}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"stage",type:"nominal",sort:["Visit","MQL","SQL","Opp","Won"],title:null,axis:{labelFontSize:9}},y:{field:"n",type:"quantitative",title:"Count",axis:{titleFontSize:9,labelFontSize:8}},tooltip:[{field:"stage",title:"Stage"},{field:"n",title:"Sum of MQL"}]} },
+                     nl: "Funnel by stage. Tooltip says \"Sum of MQL\" on every bar — wrong label.",
+                     metrics: M({visEnc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       visEnc:"Tooltip label says 'Sum of MQL' on every stage — labels are wrong.",
+                       factual:"NL flags it.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+
+      // ── L1 · Confirm factual grounding ──────────────────────────────────
+      "L1-0": {
+        correct:   { spec: VBAR([{q:"Q1",pipe:8.4},{q:"Q2",pipe:9.1},{q:"Q3",pipe:10.4},{q:"Q4",pipe:12.3},{q:"Q4 Ent.",pipe:5.8}], "q", "pipe", "Pipeline ($M)", {yScale:{domainMin:0}}),
+                     nl: "Q4 pipeline grew 18% to $12.3M, with Enterprise contributing +32% YoY at $5.8M.",
+                     metrics: M({insightful:60, assumptions:85, overallNL:90}, {
+                       insightful:"Magnitudes and segment given; could attribute to specific deals.",
+                       assumptions:"Time and segment explicit."}) },
+        partial:   { spec: VBAR([{q:"Q1",pipe:8.4},{q:"Q2",pipe:9.1},{q:"Q3",pipe:10.4},{q:"Q4",pipe:12.3}], "q", "pipe", "Pipeline ($M)", {yScale:{domainMin:0}}),
+                     nl: "Healthy growth in Q4 pipeline.",
+                     metrics: M({factual:60, insightful:30, assumptions:40, overallNL:43}, {
+                       factual:"Direction correct, but no magnitude or specifics — reader can't verify against the chart.",
+                       insightful:"Vague.",
+                       assumptions:"Time scope only weakly implied."}) },
+        incorrect: { spec: VBAR([{q:"Q1",pipe:8.4},{q:"Q2",pipe:9.1},{q:"Q3",pipe:10.4},{q:"Q4",pipe:12.3}], "q", "pipe", "Pipeline ($M)", {yScale:{domainMin:0}}),
+                     nl: "Q4 pipeline declined slightly.",
+                     metrics: M({factual:0, insightful:10, assumptions:0, overallNL:3}, {
+                       factual:"Contradicts the chart — pipeline visibly grew quarter-over-quarter.",
+                       insightful:"Misleading.",
+                       assumptions:"Nothing stated."}) }
+      },
+      "L1-1": {
+        correct:   { spec: LINE([{m:"Jan",w:42},{m:"Feb",w:46},{m:"Mar",w:51},{m:"Apr",w:55},{m:"May",w:61},{m:"Jun",w:67}], "m", "w", {xTitle:"Month",yTitle:"ER wait (min)"}),
+                     nl: "ER waits rose from 42 min in Jan to 67 in Jun — a 60% increase across six months.",
+                     metrics: M({insightful:60, assumptions:85, overallNL:90}, {
+                       insightful:"Magnitude given; could probe staffing or volume drivers.",
+                       assumptions:"Time window stated."}) },
+        partial:   { spec: LINE([{m:"Jan",w:42},{m:"Feb",w:46},{m:"Mar",w:51},{m:"Apr",w:55},{m:"May",w:61},{m:"Jun",w:67}], "m", "w", {xTitle:"Month",yTitle:"ER wait (min)"}),
+                     nl: "Waits have been increasing this year.",
+                     metrics: M({factual:60, insightful:25, assumptions:40, overallNL:42}, {
+                       factual:"Direction correct, no figures — reader can't gauge severity.",
+                       insightful:"Generic.",
+                       assumptions:"Loose time scope."}) },
+        incorrect: { spec: LINE([{m:"Jan",w:42},{m:"Feb",w:46},{m:"Mar",w:51},{m:"Apr",w:55},{m:"May",w:61},{m:"Jun",w:67}], "m", "w", {xTitle:"Month",yTitle:"ER wait (min)"}),
+                     nl: "ER waits remained stable through the period.",
+                     metrics: M({factual:0, insightful:10, assumptions:0, overallNL:3}, {
+                       factual:"Contradicts the visible 60% climb.",
+                       insightful:"Misleading.",
+                       assumptions:"Nothing stated."}) }
+      },
+      "L1-2": {
+        correct:   { spec: LINE([{y:"2023",d:8.2},{y:"2024",d:6.7},{y:"2025",d:5.1}], "y", "d", {xTitle:"Year",yTitle:"Dropout rate (%)",yScale:{domainMin:0}}),
+                     nl: "Dropout rate fell from 8.2% in 2023 to 5.1% in 2025 — a 38% decline over three years.",
+                     metrics: M({insightful:60, assumptions:85, overallNL:90}, {
+                       insightful:"Magnitude given; could attribute to specific intervention.",
+                       assumptions:"Time window stated."}) },
+        partial:   { spec: LINE([{y:"2023",d:8.2},{y:"2024",d:6.7},{y:"2025",d:5.1}], "y", "d", {xTitle:"Year",yTitle:"Dropout rate (%)",yScale:{domainMin:0}}),
+                     nl: "Dropout has improved recently.",
+                     metrics: M({factual:60, insightful:25, assumptions:40, overallNL:42}, {
+                       factual:"Direction correct but no magnitude — 'recently' is undefined.",
+                       insightful:"Vague.",
+                       assumptions:"Loose."}) },
+        incorrect: { spec: LINE([{y:"2023",d:8.2},{y:"2024",d:6.7},{y:"2025",d:5.1}], "y", "d", {xTitle:"Year",yTitle:"Dropout rate (%)",yScale:{domainMin:0}}),
+                     nl: "Dropout is at an all-time high.",
+                     metrics: M({factual:0, insightful:10, assumptions:0, overallNL:3}, {
+                       factual:"Contradicts the declining series.",
+                       insightful:"Misleading.",
+                       assumptions:"None."}) }
+      },
+      "L1-3": {
+        correct:   { spec: LINE([{q:"Q1",b:48},{q:"Q2",b:47},{q:"Q3",b:41},{q:"Q4",b:43}], "q", "b", {xTitle:"Quarter",yTitle:"Avg basket ($)",yScale:{domainMin:0}}),
+                     nl: "Basket size dropped from $47 to $41 in Q3 (−13%), driven by Electronics. Recovered partway in Q4.",
+                     metrics: M({insightful:65, assumptions:85, overallNL:92}, {
+                       insightful:"Identifies driver and recovery.",
+                       assumptions:"Time and category named."}) },
+        partial:   { spec: LINE([{q:"Q1",b:48},{q:"Q2",b:47},{q:"Q3",b:41},{q:"Q4",b:43}], "q", "b", {xTitle:"Quarter",yTitle:"Avg basket ($)",yScale:{domainMin:0}}),
+                     nl: "Basket size dipped slightly in Q3.",
+                     metrics: M({factual:60, insightful:25, assumptions:40, overallNL:42}, {
+                       factual:"'Slightly' understates a 13% drop.",
+                       insightful:"Vague.",
+                       assumptions:"Loose."}) },
+        incorrect: { spec: LINE([{q:"Q1",b:48},{q:"Q2",b:47},{q:"Q3",b:41},{q:"Q4",b:43}], "q", "b", {xTitle:"Quarter",yTitle:"Avg basket ($)",yScale:{domainMin:0}}),
+                     nl: "Basket size hit a new peak in Q3.",
+                     metrics: M({factual:0, insightful:10, assumptions:0, overallNL:3}, {
+                       factual:"Q3 is a trough, not a peak.",
+                       insightful:"Misleading.",
+                       assumptions:"None."}) }
+      },
+
+      // ── L2 · Demand assumption disclosure ───────────────────────────────
+      "L2-0": {
+        correct:   { spec: HBAR([{c:"Spring promo",cv:0.32},{c:"Welcome",cv:0.28},{c:"Newsletter",cv:0.22},{c:"Re-engage",cv:0.14}], "c", "cv", "Conversion rate", {format:".0%"}),
+                     nl: "Active campaigns in Q1 2026, ranked by conversion. A/B test variants excluded.",
+                     metrics: M({insightful:55, assumptions:95, overallNL:90}, {
+                       insightful:"Campaigns named; could comment on tactic mix.",
+                       assumptions:"Time, status filter, and exclusion all explicit."}) },
+        partial:   { spec: HBAR([{c:"Spring promo",cv:0.32},{c:"Welcome",cv:0.28},{c:"Newsletter",cv:0.22},{c:"Re-engage",cv:0.14}], "c", "cv", "Conversion rate", {format:".0%"}),
+                     nl: "Filtered to Q1 campaigns.",
+                     metrics: M({assumptions:50, factual:70, insightful:30, overallNL:50}, {
+                       assumptions:"Time filter stated; A/B test exclusion and active-status filter omitted.",
+                       factual:"Truthful but incomplete.",
+                       insightful:"Generic."}) },
+        incorrect: { spec: HBAR([{c:"Spring promo",cv:0.32},{c:"Welcome",cv:0.28},{c:"Newsletter",cv:0.22},{c:"Re-engage",cv:0.14}], "c", "cv", "Conversion rate", {format:".0%"}),
+                     nl: "Here is campaign performance.",
+                     metrics: M({assumptions:0, factual:50, insightful:15, overallNL:22}, {
+                       assumptions:"No methodology disclosed at all.",
+                       factual:"Doesn't tie text to chart specifics.",
+                       insightful:"None."}) }
+      },
+      "L2-1": {
+        correct:   { spec: HBAR([{f:"Alpha",twr:14.2},{f:"Beta",twr:9.8},{f:"S&P 500",twr:11.5}], "f", "twr", "12-mo TWR (%)"),
+                     nl: "12-month time-weighted returns, net of fees, vs. S&P 500 benchmark, as of March 2026.",
+                     metrics: M({insightful:60, assumptions:95, overallNL:92}, {
+                       insightful:"Benchmark comparison present; could quantify alpha.",
+                       assumptions:"Period, fee treatment, and benchmark all explicit."}) },
+        partial:   { spec: HBAR([{f:"Alpha",twr:14.2},{f:"Beta",twr:9.8},{f:"S&P 500",twr:11.5}], "f", "twr", "12-mo return (%)"),
+                     nl: "12-month returns by fund.",
+                     metrics: M({assumptions:50, factual:70, insightful:30, overallNL:50}, {
+                       assumptions:"Period named; fee treatment and benchmark relationship omitted.",
+                       factual:"Truthful but partial.",
+                       insightful:"Generic."}) },
+        incorrect: { spec: HBAR([{f:"Alpha",twr:14.2},{f:"Beta",twr:9.8},{f:"S&P 500",twr:11.5}], "f", "twr", "Return (%)"),
+                     nl: "Here are fund comparisons.",
+                     metrics: M({assumptions:0, factual:50, insightful:15, overallNL:22}, {
+                       assumptions:"No methodology stated.",
+                       factual:"Vague.",
+                       insightful:"None."}) }
+      },
+      "L2-2": {
+        correct:   { spec: HBAR([{arm:"Treatment",rate:0.62},{arm:"Placebo",rate:0.21}], "arm", "rate", "Wk 12 response rate", {format:".0%"}),
+                     nl: "ITT analysis: primary endpoint at week 12, screen failures excluded.",
+                     metrics: M({insightful:60, assumptions:95, overallNL:92}, {
+                       insightful:"Clear endpoint and population.",
+                       assumptions:"ITT, timepoint, and exclusion explicit."}) },
+        partial:   { spec: HBAR([{arm:"Treatment",rate:0.62},{arm:"Placebo",rate:0.21}], "arm", "rate", "Wk 12 response rate", {format:".0%"}),
+                     nl: "Week 12 results.",
+                     metrics: M({assumptions:50, factual:65, insightful:30, overallNL:48}, {
+                       assumptions:"Timepoint stated; analysis population (ITT) omitted.",
+                       factual:"Numbers right; methodology unclear.",
+                       insightful:"Generic."}) },
+        incorrect: { spec: HBAR([{arm:"Treatment",rate:0.62},{arm:"Placebo",rate:0.21}], "arm", "rate", "Response rate", {format:".0%"}),
+                     nl: "Here are the outcomes.",
+                     metrics: M({assumptions:0, factual:50, insightful:15, overallNL:22}, {
+                       assumptions:"No methodology disclosed.",
+                       factual:"Vague.",
+                       insightful:"None."}) }
+      },
+      "L2-3": {
+        correct:   { spec: HBAR([{tier:"Tier 1",hrs:2.4},{tier:"Tier 2",hrs:6.1},{tier:"Tier 3",hrs:14.8}], "tier", "hrs", "Avg resolution (hrs, 30d)", {format:".1f"}, {sort:"x"}),
+                     nl: "Average resolution time by tier (T1–T3), last 30 days, auto-closed cases excluded.",
+                     metrics: M({insightful:55, assumptions:95, overallNL:90}, {
+                       insightful:"Names tiers and metric.",
+                       assumptions:"Period, tiers, and exclusion explicit."}) },
+        partial:   { spec: HBAR([{tier:"Tier 1",hrs:2.4},{tier:"Tier 2",hrs:6.1},{tier:"Tier 3",hrs:14.8}], "tier", "hrs", "Avg resolution (hrs)", {format:".1f"}, {sort:"x"}),
+                     nl: "Last 30 days.",
+                     metrics: M({assumptions:50, factual:65, insightful:30, overallNL:48}, {
+                       assumptions:"Period stated; exclusion (auto-close) omitted.",
+                       factual:"Numbers correct; methodology partial.",
+                       insightful:"Generic."}) },
+        incorrect: { spec: HBAR([{tier:"Tier 1",hrs:2.4},{tier:"Tier 2",hrs:6.1},{tier:"Tier 3",hrs:14.8}], "tier", "hrs", "Avg", {format:".1f"}, {sort:"x"}),
+                     nl: "Here is performance.",
+                     metrics: M({assumptions:0, factual:50, insightful:15, overallNL:22}, {
+                       assumptions:"No metric, no period, no exclusion stated.",
+                       factual:"Vague.",
+                       insightful:"None."}) }
+      },
+
+      // ── L3 · Seek meaningful insights ───────────────────────────────────
+      "L3-0": {
+        correct:   { spec: VBAR([{cat:"Electronics",ret:1840},{cat:"Apparel",ret:920},{cat:"Home",ret:540},{cat:"Beauty",ret:312}], "cat", "ret", "Returns (March)"),
+                     nl: "Electronics returns +40% in March vs. February — concentrated in the new laptop launch. Recommend QA review of the launch SKU before next promo.",
+                     metrics: M({insightful:90, assumptions:90, overallNL:97}, {
+                       insightful:"Identifies driver and recommends action.",
+                       assumptions:"Period and category explicit."}) },
+        partial:   { spec: VBAR([{cat:"Electronics",ret:1840},{cat:"Apparel",ret:920},{cat:"Home",ret:540},{cat:"Beauty",ret:312}], "cat", "ret", "Returns (March)"),
+                     nl: "Electronics returns are higher than other categories.",
+                     metrics: M({insightful:30, factual:80, assumptions:60, overallNL:57}, {
+                       insightful:"Names which category is highest; no cause or action.",
+                       factual:"Truthful but shallow.",
+                       assumptions:"Period implicit."}) },
+        incorrect: { spec: VBAR([{cat:"Electronics",ret:1840},{cat:"Apparel",ret:920},{cat:"Home",ret:540},{cat:"Beauty",ret:312}], "cat", "ret", "Returns"),
+                     nl: "Here is a breakdown of returns.",
+                     metrics: M({insightful:5, factual:60, assumptions:0, overallNL:22}, {
+                       insightful:"Restates the request — no analysis.",
+                       factual:"Vague.",
+                       assumptions:"None."}) }
+      },
+      "L3-1": {
+        correct:   { spec: VBAR([{c:"Online",e:920,d:-0.22},{c:"In-person",e:1840,d:0.08}], "c", "e", "Enrollment"),
+                     nl: "Online enrollment −22%, in-person +8% — a clear post-pandemic shift. Aid applications also down 15%, suggesting demand-side pressure.",
+                     metrics: M({insightful:90, assumptions:88, overallNL:96}, {
+                       insightful:"Splits channels, links to broader signal.",
+                       assumptions:"Comparison baseline implied."}) },
+        partial:   { spec: VBAR([{c:"Online",e:920},{c:"In-person",e:1840}], "c", "e", "Enrollment"),
+                     nl: "Enrollment is down 12% versus last year.",
+                     metrics: M({insightful:30, factual:75, assumptions:60, overallNL:55}, {
+                       insightful:"States magnitude only — no cause analysis.",
+                       factual:"Truthful aggregate; misses the channel split.",
+                       assumptions:"Baseline named."}) },
+        incorrect: { spec: VBAR([{c:"Online",e:920},{c:"In-person",e:1840}], "c", "e", "Enrollment"),
+                     nl: "Here are the enrollment numbers.",
+                     metrics: M({insightful:5, factual:50, assumptions:0, overallNL:18}, {
+                       insightful:"Echoes request without addressing the 'why.'",
+                       factual:"Vague.",
+                       assumptions:"None."}) }
+      },
+      "L3-2": {
+        correct:   { spec: VBAR([{m:"Quota %",v:0.85},{m:"Close rate",v:0.42},{m:"Avg deal $",v:0.95}], "m", "v", "West region (vs. national)", {yScale:{domainMin:0}}),
+                     nl: "West is at 85% quota with a strong 42% close rate — bottleneck is volume, not conversion. Pipeline coverage is the lever.",
+                     metrics: M({insightful:90, assumptions:90, overallNL:97}, {
+                       insightful:"Diagnoses bottleneck; prescribes lever.",
+                       assumptions:"Comparison baseline explicit."}) },
+        partial:   { spec: VBAR([{m:"Quota %",v:0.85},{m:"Close rate",v:0.42}], "m", "v", "West region"),
+                     nl: "West is below quota.",
+                     metrics: M({insightful:25, factual:70, assumptions:50, overallNL:48}, {
+                       insightful:"Aggregate observation; no decomposition.",
+                       factual:"Truthful.",
+                       assumptions:"Implied."}) },
+        incorrect: { spec: VBAR([{m:"Quota %",v:0.85},{m:"Close rate",v:0.42}], "m", "v", "West region"),
+                     nl: "Here is West performance.",
+                     metrics: M({insightful:5, factual:50, assumptions:0, overallNL:18}, {
+                       insightful:"Echoes the request.",
+                       factual:"Vague.",
+                       assumptions:"None."}) }
+      },
+      "L3-3": {
+        correct:   { spec: LINE([{m:"Apr",r:9.8},{m:"May",r:10.2},{m:"Jun",r:11.0},{m:"Jul",r:13.4},{m:"Aug",r:15.1},{m:"Sep",r:16.0}], "m", "r", {xTitle:"Month",yTitle:"Cardiology readmission %",yScale:{domainMin:0}}),
+                     nl: "Cardiology readmissions rose from 11% to 16% across Q3, concentrated in heart-failure cases. Coincides with the July protocol update — worth reviewing the change.",
+                     metrics: M({insightful:90, assumptions:90, overallNL:97}, {
+                       insightful:"Localizes the rise and links to a known event.",
+                       assumptions:"Department, period, and protocol explicit."}) },
+        partial:   { spec: LINE([{m:"Apr",r:9.8},{m:"May",r:10.2},{m:"Jun",r:11.0},{m:"Jul",r:13.4},{m:"Aug",r:15.1},{m:"Sep",r:16.0}], "m", "r", {xTitle:"Month",yTitle:"Readmission %",yScale:{domainMin:0}}),
+                     nl: "Readmissions increased in Q3.",
+                     metrics: M({insightful:25, factual:65, assumptions:50, overallNL:47}, {
+                       insightful:"Magnitude implied; no department or cause.",
+                       factual:"Truthful aggregate.",
+                       assumptions:"Implied."}) },
+        incorrect: { spec: LINE([{m:"Apr",r:9.8},{m:"May",r:10.2},{m:"Jun",r:11.0},{m:"Jul",r:13.4},{m:"Aug",r:15.1},{m:"Sep",r:16.0}], "m", "r", {xTitle:"Month",yTitle:"%",yScale:{domainMin:0}}),
+                     nl: "Here are the readmission rates.",
+                     metrics: M({insightful:5, factual:50, assumptions:0, overallNL:18}, {
+                       insightful:"No analysis.",
+                       factual:"Vague.",
+                       assumptions:"None."}) }
+      },
+
+      // ── C1 · Check coherence ────────────────────────────────────────────
+      "C1-0": {
+        correct:   { spec: LINE([{m:"Jan",csat:4.4},{m:"Feb",csat:4.3},{m:"Mar",csat:3.2},{m:"Apr",csat:3.6}], "m", "csat", {xTitle:"Month",yTitle:"CSAT",yScale:{domain:[0,5]}}),
+                     nl: "CSAT fell to 3.2 in March as resolution time rose 40%. CRM migration in early March caused the resolution delays — a single coherent thread.",
+                     metrics: M({insightful:80, assumptions:90, overallNL:93}, {
+                       insightful:"Causal chain articulated.",
+                       assumptions:"Event named."}) },
+        partial:   { spec: LINE([{m:"Jan",csat:4.4},{m:"Feb",csat:4.3},{m:"Mar",csat:3.2},{m:"Apr",csat:3.6}], "m", "csat", {xTitle:"Month",yTitle:"CSAT",yScale:{domain:[0,5]}}),
+                     nl: "CSAT dropped. Resolution time was up. We hired more agents.",
+                     metrics: M({insightful:30, factual:65, assumptions:30, overallNL:42}, {
+                       insightful:"Three facts with no logical link.",
+                       factual:"True but disconnected.",
+                       assumptions:"None."}) },
+        incorrect: { spec: LINE([{m:"Jan",csat:4.4},{m:"Feb",csat:4.3},{m:"Mar",csat:3.2},{m:"Apr",csat:3.6}], "m", "csat", {xTitle:"Month",yTitle:"CSAT",yScale:{domain:[0,5]}}),
+                     nl: "CSAT improved this quarter, so we should invest in fixing the decline.",
+                     metrics: M({insightful:5, factual:0, assumptions:0, overallNL:2}, {
+                       insightful:"Self-contradictory.",
+                       factual:"States 'improved' for a clear decline.",
+                       assumptions:"None."}) }
+      },
+      "C1-1": {
+        correct:   { spec: HBAR([{sec:"Tech",alloc:0.35,r:0.18},{sec:"Healthcare",alloc:0.20,r:0.10},{sec:"Bonds",alloc:0.30,r:0.04},{sec:"Cash",alloc:0.15,r:0.02}], "sec", "alloc", "Allocation", {format:".0%"}),
+                     nl: "Tech at 35% allocation drove the 4.2% gain — but its overweight position vs. benchmark also raises concentration risk.",
+                     metrics: M({insightful:75, assumptions:90, overallNL:92}, {
+                       insightful:"Trade-off articulated.",
+                       assumptions:"Comparison stated."}) },
+        partial:   { spec: HBAR([{sec:"Tech",alloc:0.35},{sec:"Healthcare",alloc:0.20},{sec:"Bonds",alloc:0.30},{sec:"Cash",alloc:0.15}], "sec", "alloc", "Allocation", {format:".0%"}),
+                     nl: "Tech is doing well. Bonds are down. Returns are positive overall.",
+                     metrics: M({insightful:25, factual:65, assumptions:30, overallNL:40}, {
+                       insightful:"Statements don't connect.",
+                       factual:"True but fragmented.",
+                       assumptions:"None."}) },
+        incorrect: { spec: HBAR([{sec:"Tech",alloc:0.35},{sec:"Healthcare",alloc:0.20},{sec:"Bonds",alloc:0.30},{sec:"Cash",alloc:0.15}], "sec", "alloc", "Allocation", {format:".0%"}),
+                     nl: "Returns are strong, so portfolio risk is low — we should increase leverage.",
+                     metrics: M({insightful:5, factual:10, assumptions:0, overallNL:5}, {
+                       insightful:"High return ≠ low risk; conclusion is non-sequitur.",
+                       factual:"Misleading framing.",
+                       assumptions:"None."}) }
+      },
+      "C1-2": {
+        correct:   { spec: LINE([{m:"Jan",opens:0.42,clicks:0.058},{m:"Feb",opens:0.40,clicks:0.057},{m:"Mar",opens:0.36,clicks:0.058},{m:"Apr",opens:0.34,clicks:0.057}], "m", "opens", {xTitle:"Month",yTitle:"Open rate",yScale:{domainMin:0}}),
+                     nl: "Open rate fell 12% after the list grew 30% — quality dilution. Click rate held steady, so engaged readers are still engaging.",
+                     metrics: M({insightful:80, assumptions:90, overallNL:93}, {
+                       insightful:"Diagnoses dilution; separates audience layers.",
+                       assumptions:"Period and metrics explicit."}) },
+        partial:   { spec: LINE([{m:"Jan",opens:0.42},{m:"Feb",opens:0.40},{m:"Mar",opens:0.36},{m:"Apr",opens:0.34}], "m", "opens", {xTitle:"Month",yTitle:"Open rate",yScale:{domainMin:0}}),
+                     nl: "Opens fell. Clicks were stable. The list grew.",
+                     metrics: M({insightful:25, factual:65, assumptions:30, overallNL:40}, {
+                       insightful:"Three facts, no causal link.",
+                       factual:"True but disconnected.",
+                       assumptions:"None."}) },
+        incorrect: { spec: LINE([{m:"Jan",opens:0.42},{m:"Feb",opens:0.40},{m:"Mar",opens:0.36},{m:"Apr",opens:0.34}], "m", "opens", {xTitle:"Month",yTitle:"Open rate",yScale:{domainMin:0}}),
+                     nl: "Engagement is up, though we should address the sharp decline.",
+                     metrics: M({insightful:5, factual:5, assumptions:0, overallNL:3}, {
+                       insightful:"Contradicts itself in one sentence.",
+                       factual:"Both halves can't be true.",
+                       assumptions:"None."}) }
+      },
+      "C1-3": {
+        correct:   { spec: VBAR([{dose:"Low",ae:0.07},{dose:"High",ae:0.18}], "dose", "ae", "Grade 3+ AE rate", {yScale:{domainMin:0}}),
+                     nl: "Grade 3+ AEs: 18% high-dose vs. 7% low-dose — a clean dose-dependent signal. No new safety concerns identified beyond the known profile.",
+                     metrics: M({insightful:75, assumptions:90, overallNL:92}, {
+                       insightful:"Notes dose-dependence and benchmarks against known profile.",
+                       assumptions:"Population implied."}) },
+        partial:   { spec: VBAR([{dose:"Low",ae:0.07},{dose:"High",ae:0.18}], "dose", "ae", "Grade 3+ AE rate", {yScale:{domainMin:0}}),
+                     nl: "AEs were higher in the high-dose arm. Drug is well-tolerated and there are no concerns.",
+                     metrics: M({insightful:15, factual:35, assumptions:30, overallNL:27}, {
+                       insightful:"Self-contradictory: higher AEs but 'no concerns.'",
+                       factual:"Tension between halves of the statement.",
+                       assumptions:"None."}) },
+        incorrect: { spec: VBAR([{dose:"Low",ae:0.07},{dose:"High",ae:0.18}], "dose", "ae", "Grade 3+ AE rate", {yScale:{domainMin:0}}),
+                     nl: "Safety profile is excellent — recommend escalating dose to improve outcomes.",
+                     metrics: M({insightful:5, factual:10, assumptions:0, overallNL:5}, {
+                       insightful:"Recommends increasing the very dose with higher AEs.",
+                       factual:"Contradicts the chart.",
+                       assumptions:"None."}) }
+      },
+
+      // ── C2 · Test follow-up relevance (multi-turn; chart = T2 result) ───
+      "C2-0": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{m:"Jan",dx:"HF",adm:18},{m:"Jan",dx:"MI",adm:12},{m:"Feb",dx:"HF",adm:21},{m:"Feb",dx:"MI",adm:14},{m:"Mar",dx:"HF",adm:25},{m:"Mar",dx:"MI",adm:16}]},
+                     mark:{type:"bar"},
+                     encoding:{x:{field:"m",type:"nominal",title:null,axis:{labelFontSize:9}},y:{field:"adm",type:"quantitative",title:"ICU admissions",axis:{titleFontSize:9,labelFontSize:8}},color:{field:"dx",type:"nominal",legend:{labelFontSize:8,titleFontSize:8,title:"Diagnosis"}}} },
+                     nl: "T2 response: ICU admissions broken down by diagnosis, monthly. Both T1 filters (Unit = ICU, monthly grain) preserved.",
+                     metrics: M({insightful:60, assumptions:95, overallNL:92}, {
+                       insightful:"Adds diagnosis dimension while keeping prior context.",
+                       assumptions:"Filter carryover explicit."}) },
+        partial:   { spec: HBAR([{dx:"HF",adm:64},{dx:"MI",adm:42},{dx:"Stroke",adm:31},{dx:"Sepsis",adm:28}], "dx", "adm", "ICU admissions"),
+                     nl: "T2 response: ICU admissions by diagnosis. Monthly grain dropped.",
+                     metrics: M({filterAcc:50, factual:70, insightful:30, assumptions:30, overallViz:93, overallNL:43}, {
+                       filterAcc:"ICU filter kept, but the monthly axis from T1 was dropped.",
+                       factual:"Doesn't tell user about the lost time grain.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose dropped filter."}) },
+        incorrect: { spec: HBAR([{dx:"HF",adm:184},{dx:"MI",adm:142},{dx:"Stroke",adm:98},{dx:"Sepsis",adm:81},{dx:"Other",adm:120}], "dx", "adm", "All admissions"),
+                     nl: "T2 response: Admissions by diagnosis (all units, all time).",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Both T1 filters dropped — Unit and monthly grain gone.",
+                       factual:"Looks plausible but reflects an entirely different scope.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "C2-1": {
+        correct:   { spec: { $schema:SCHEMA, data:{values:[{q:"Last Q",pipe:8.4},{q:"This Q",pipe:11.2}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"q",type:"nominal",sort:["Last Q","This Q"],title:null,axis:{labelFontSize:9}},y:{field:"pipe",type:"quantitative",title:"Enterprise pipeline ($M)",axis:{titleFontSize:9,labelFontSize:8}}} },
+                     nl: "T2 response: Enterprise pipeline this Q vs. last Q. Segment filter from T1 preserved.",
+                     metrics: M({insightful:60, assumptions:95, overallNL:92}, {
+                       insightful:"Compares periods within the prior segment.",
+                       assumptions:"Carryover explicit."}) },
+        partial:   { spec: { $schema:SCHEMA, data:{values:[{q:"Last Q",pipe:24.1},{q:"This Q",pipe:28.6}]},
+                     mark:{type:"bar",color:"#1896FF"},
+                     encoding:{x:{field:"q",type:"nominal",sort:["Last Q","This Q"],title:null,axis:{labelFontSize:9}},y:{field:"pipe",type:"quantitative",title:"Pipeline ($M)",axis:{titleFontSize:9,labelFontSize:8}}} },
+                     nl: "T2 response: Pipeline this Q vs. last Q. Enterprise filter dropped — all segments.",
+                     metrics: M({filterAcc:50, factual:70, insightful:30, assumptions:30, overallViz:93, overallNL:43}, {
+                       filterAcc:"Quarterly comparison kept; Enterprise segment filter from T1 dropped.",
+                       factual:"Numbers reflect a different scope than implied.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose dropped filter."}) },
+        incorrect: { spec: HBAR([{seg:"SMB",pipe:9.4},{seg:"Mid-market",pipe:11.8},{seg:"Enterprise",pipe:11.2},{seg:"Strategic",pipe:6.2}], "seg", "pipe", "Pipeline this Q ($M)"),
+                     nl: "T2 response: Pipeline by segment, this quarter only.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Both context elements dropped — no Enterprise filter, no quarterly comparison.",
+                       factual:"Doesn't answer the comparison question at all.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "C2-2": {
+        correct:   { spec: HBAR([{cat:"Phones",g:0.42},{cat:"Wearables",g:0.31},{cat:"Tablets",g:0.18},{cat:"Laptops",g:0.09}], "cat", "g", "Online + Northeast growth", {format:".0%"}),
+                     nl: "T2 response: Categories growing within Online + Northeast. Both T1 filters preserved.",
+                     metrics: M({insightful:60, assumptions:95, overallNL:92}, {
+                       insightful:"Names growing categories within the kept scope.",
+                       assumptions:"Carryover explicit."}) },
+        partial:   { spec: HBAR([{cat:"Phones",g:0.36},{cat:"Wearables",g:0.27},{cat:"Tablets",g:0.14},{cat:"Laptops",g:0.07}], "cat", "g", "Online growth (all regions)", {format:".0%"}),
+                     nl: "T2 response: Categories growing online. Northeast filter dropped.",
+                     metrics: M({filterAcc:50, factual:70, insightful:30, assumptions:30, overallViz:93, overallNL:43}, {
+                       filterAcc:"Online filter kept; Northeast filter from T1 dropped.",
+                       factual:"Numbers reflect a wider scope.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose dropped filter."}) },
+        incorrect: { spec: HBAR([{cat:"Phones",g:0.18},{cat:"Wearables",g:0.12},{cat:"Tablets",g:0.05},{cat:"Laptops",g:0.02}], "cat", "g", "All-channel, all-region growth", {format:".0%"}),
+                     nl: "T2 response: Categories growing overall.",
+                     metrics: M({filterAcc:0, factual:30, insightful:15, assumptions:0, overallViz:86, overallNL:15}, {
+                       filterAcc:"Both T1 filters (Online, Northeast) dropped — fully reset scope.",
+                       factual:"Wrong scope entirely.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      },
+      "C2-3": {
+        correct:   { spec: HBAR([{g:"Female",e:512},{g:"Male",e:498},{g:"Non-binary",e:42}], "g", "e", "STEM enrollment by gender"),
+                     nl: "T2 response: Gender breakdown within STEM. STEM filter from T1 preserved.",
+                     metrics: M({insightful:55, assumptions:95, overallNL:90}, {
+                       insightful:"Names balance.",
+                       assumptions:"Carryover explicit."}) },
+        partial:   { spec: HBAR([{g:"Female",e:1820},{g:"Male",e:1640},{g:"Non-binary",e:148}], "g", "e", "Enrollment by gender (all programs)"),
+                     nl: "T2 response: Enrollment by gender across all programs. STEM filter dropped.",
+                     metrics: M({filterAcc:30, factual:60, insightful:30, assumptions:30, overallViz:90, overallNL:38}, {
+                       filterAcc:"STEM filter from T1 dropped.",
+                       factual:"Counts reflect the full school, not STEM.",
+                       insightful:"None.",
+                       assumptions:"Doesn't disclose dropped filter."}) },
+        incorrect: { spec: HBAR([{g:"Female",pct:0.51},{g:"Male",pct:0.47},{g:"Non-binary",pct:0.02}], "g", "pct", "University demographics", {format:".0%"}),
+                     nl: "T2 response: University-wide demographics.",
+                     metrics: M({filterAcc:0, factual:25, insightful:15, assumptions:0, overallViz:86, overallNL:13}, {
+                       filterAcc:"All context lost — STEM filter dropped, scope changed to demographics.",
+                       factual:"Different question entirely.",
+                       insightful:"None.",
+                       assumptions:"None."}) }
+      }
+    };
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Each criterion's focus metric — the one named in the card title.
+    // The card's bottom line surfaces only this metric's why, so the rationale
+    // stays interpretable without crowding the metric grid.
+    const FOCUS_METRIC = {
+      V1: "Data fidelity",
+      V2: "Field similarity",
+      V3: "Chart type",
+      V4: "Axis accuracy",
+      V5: "Filter accuracy",
+      V6: "Sort accuracy",
+      V7: "Visual encoding",
+      V8: "Visual encoding",
+      L1: "Factual grounding",
+      L2: "Assumptions disclosure",
+      L3: "Insightfulness",
+      C1: "Insightfulness",
+      C2: "Filter accuracy",
+    };
+
+    function expandCards() {
+      const out = [];
+      criteria.forEach(c => {
+        c.examples.forEach((ex, i) => {
+          const key = `${c.id}-${i}`;
+          const td = TIER_DATA[key];
+          if (td) {
+            ["correct","partial","incorrect"].forEach(t => {
+              if (td[t]) out.push({...c, exIdx:i, ex, tier:t, tierData:td[t], cardKey:`${key}-${t}`});
+            });
+          } else {
+            out.push({...c, exIdx:i, ex, cardKey:key});
+          }
+        });
+      });
+      return out;
+    }
+    const allCards = expandCards();
+
+    function VegaChart({spec, width, height}) {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (!ref.current || !spec || !window.vegaEmbed) return;
+        const finalSpec = {...spec, width, height, padding: 4, background: "transparent"};
+        window.vegaEmbed(ref.current, finalSpec, {actions:false, renderer:"svg"}).catch(e => console.warn("vega-embed failed", e));
+      }, [spec, width, height]);
+      return <div ref={ref} style={{width, height, display:"flex", alignItems:"center", justifyContent:"center"}}/>;
+    }
+
+    function scoreColor(s) {
+      if (s >= 95) return {bg:"#04E1CB", fg:"#032D60"};
+      if (s >= 70) return {bg:"#FCC003", fg:"#5A4500"};
+      return {bg:"#FF538A", fg:"#fff"};
+    }
+
+    function MetricChip({m}) {
+      const c = scoreColor(m.score);
+      const sub = m.score < 100;
+      const colSpan = m.wide ? "1 / -1" : undefined;
+      return (
+        <div style={{padding:"2px 0",borderBottom:"1px solid #f4f4f4",gridColumn:colSpan,alignSelf:"start"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:4}}>
+            <span style={{fontSize:8.5, color: sub?"#333":"#999", fontWeight:500, lineHeight:1.2, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{m.label}</span>
+            <span style={{fontSize:7.5, fontWeight:800, color:c.fg, background:c.bg, padding:"1px 5px", borderRadius:7, minWidth:26, textAlign:"center", lineHeight:1.2, flexShrink:0}}>{m.score}%</span>
+          </div>
+        </div>
+      );
+    }
+
+    function MetricSection({label, metrics, overall, accent}) {
+      const oc = overall ? scoreColor(overall.score) : null;
+      const tip = overall && overall.why ? `${overall.label} — ${overall.score}%\n${overall.why}` : (overall ? `${overall.label} — ${overall.score}%` : "");
+      return (
+        <div style={{marginBottom:6}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:3,marginBottom:3,borderBottom:`2px solid ${accent}`}}>
+            <span style={{fontSize:7.5,fontWeight:800,color:accent,letterSpacing:"0.08em",textTransform:"uppercase"}}>{label}</span>
+            {overall && (
+              <span title={tip} style={{display:"flex",alignItems:"center",gap:5,cursor:overall.why?"help":"default"}}>
+                <span style={{fontSize:7.5,fontWeight:700,color:"#888",letterSpacing:"0.04em",textTransform:"uppercase"}}>Overall</span>
+                <span style={{fontSize:10,fontWeight:800,color:oc.fg,background:oc.bg,padding:"2px 9px",borderRadius:10,minWidth:38,textAlign:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.08)"}}>{overall.score}%</span>
+              </span>
+            )}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",columnGap:12,alignItems:"start"}}>
+            {metrics.map((m,i) => <MetricChip key={i} m={m}/>)}
+          </div>
+        </div>
+      );
+    }
+
+    function parseSections(metrics) {
+      const sections = [];
+      let buf = [];
+      metrics.forEach(m => {
+        if (m.bold) {
+          const isNL = /nl/i.test(m.label);
+          const isConv = /conv/i.test(m.label);
+          const label = isConv ? "Conversation quality" : isNL ? "Analytical language quality" : "Visualization quality";
+          const accent = "#032D60";
+          sections.push({label, metrics: buf, overall: m, accent});
+          buf = [];
+        } else {
+          buf.push(m);
+        }
+      });
+      if (buf.length) sections.push({label:"Other", metrics: buf, overall: null, accent:"#888"});
+      return sections;
+    }
+
+    function Front({card}) {
+      const cat = CATS[card.cat];
+      const isDark = cat.fg === "#fff";
+      const sbarBg = isDark ? "rgba(0,0,0,0.15)" : "rgba(3,45,96,0.08)";
+      const sbarTxt = isDark ? "rgba(255,255,255,0.4)" : "rgba(3,45,96,0.3)";
+      const ovrBg = isDark ? "rgba(0,0,0,0.12)" : "rgba(3,45,96,0.08)";
+      const sideLabel = `${RESP[card.rt]} – ${DOMAINS[card.ex.domain]}`;
+      const tier = card.tier ? TIER_META[card.tier] : null;
+      let focusMetric = null;
+      let focusRationale = null;
+      if (card.tier && card.tierData) {
+        const focusLabel = FOCUS_METRIC[card.id];
+        focusMetric = card.tierData.metrics.find(m => m.label === focusLabel);
+        const tierIdx = card.tier === "correct" ? 0 : card.tier === "partial" ? 1 : 2;
+        focusRationale = (focusMetric && focusMetric.why) || card.spectrum[tierIdx];
+      }
+      return (
+        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",background:cat.bg,color:cat.fg,boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
+          <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
+            <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
           </div>
           <div style={{flex:1,display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
             <div style={{color:cat.fg}}>{catIcons[card.cat]}</div>
-            <div style={{padding:"14px 14px 0",flex:1,display:"flex",flexDirection:"column",position:"relative",zIndex:1}}>
-              <div style={{fontSize:9,fontWeight:600,color:cat.fgMuted,letterSpacing:"0.04em",marginBottom:10}}>{cat.label}</div>
-              <div style={{fontSize:18,fontWeight:800,lineHeight:1.2,letterSpacing:"-0.01em",marginBottom:10,color:cat.fg}}>{card.title}<span style={{whiteSpace:"nowrap"}}>{" "}<span style={{fontWeight:400,opacity:0.5}}>›</span></span></div>
-              <div style={{fontSize:10,lineHeight:1.55,color:cat.fgMuted,fontWeight:400}}>{card.desc}</div>
+            <div style={{padding:"18px 18px 0",flex:1,display:"flex",flexDirection:"column",position:"relative",zIndex:1}}>
+              <div style={{fontSize:11,fontWeight:600,color:cat.fgMuted,letterSpacing:"0.04em",marginBottom:14}}>{cat.label}</div>
+              <div style={{fontSize:24,fontWeight:800,lineHeight:1.15,letterSpacing:"-0.01em",marginBottom:14,color:cat.fg}}>{card.title}<span style={{whiteSpace:"nowrap"}}>{" "}<span style={{fontWeight:400,opacity:0.5}}>›</span></span></div>
+              <div style={{fontSize:13,lineHeight:1.5,color:cat.fgMuted,fontWeight:400}}>{card.desc}</div>
               <div style={{flex:1}}/>
-              <div style={{background:ovrBg,borderRadius:6,padding:"8px 10px",marginBottom:14}}>
-                <div style={{fontSize:7,fontWeight:700,color:cat.fgMuted,letterSpacing:"0.1em",marginBottom:3,textTransform:"uppercase"}}>Ask yourself</div>
-                <div style={{fontSize:9.5,fontWeight:600,lineHeight:1.4,fontStyle:"italic",color:cat.fg,opacity:0.95}}>{card.auditQ}</div>
+              <div style={{background:ovrBg,borderRadius:8,padding:"12px 14px",marginBottom:tier?10:18}}>
+                <div style={{fontSize:8.5,fontWeight:700,color:cat.fgMuted,letterSpacing:"0.1em",marginBottom:4,textTransform:"uppercase"}}>Ask yourself</div>
+                <div style={{fontSize:12,fontWeight:600,lineHeight:1.4,fontStyle:"italic",color:cat.fg,opacity:0.95}}>{card.auditQ}</div>
+              </div>
+              {tier && (
+                <div style={{marginBottom:14}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
+                    <span style={{fontSize:8.5,fontWeight:800,color:tier.tc,background:tier.color,padding:"2px 9px",borderRadius:10,letterSpacing:"0.06em"}}>{tier.icon} {tier.label}</span>
+                    {focusMetric && <span style={{fontSize:9.5,fontWeight:700,color:cat.fg,opacity:0.9}}>{focusMetric.label} {focusMetric.score}%</span>}
+                  </div>
+                  {focusRationale && (
+                    <div style={{fontSize:10,lineHeight:1.4,color:cat.fgMuted,fontStyle:"italic"}}>{focusRationale}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function NewBack({card}) {
+      const cat = CATS[card.cat];
+      const tier = TIER_META[card.tier];
+      const td = card.tierData;
+      const sbarBg = `${cat.bg}12`;
+      const sbarTxt = `${cat.bg}55`;
+      const sideLabel = `${RESP[card.rt]} – ${DOMAINS[card.ex.domain]}`;
+      return (
+        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)",background:"#fff"}}>
+          <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
+            <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
+          </div>
+          <div style={{flex:1, display:"flex", flexDirection:"column", overflow:"hidden"}}>
+            <div style={{height:5, background:cat.bg}}/>
+            <div style={{padding:"8px 12px 4px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,marginBottom:5}}>
+                <div style={{fontSize:9,fontWeight:700,color:cat.bg}}>{cat.label} · {card.title}</div>
+                <div style={{fontSize:8,fontWeight:800,color:tier.tc,background:tier.color,padding:"1px 7px",borderRadius:9,letterSpacing:"0.06em"}}>{tier.icon} {tier.label}</div>
+              </div>
+              <div style={{background:"#F5F5F3",borderRadius:5,padding:"4px 8px",marginBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}}>
+                  <span style={{fontSize:7,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase"}}>User asks</span>
+                  <span style={{fontSize:6.5,color:"#bbb",fontWeight:500}}>{card.ex.product}</span>
+                </div>
+                <div style={{fontSize:9.5,color:"#333",fontWeight:600,lineHeight:1.3}}>{card.ex.utterance}</div>
+              </div>
+            </div>
+            <div style={{padding:"0 12px 4px"}}>
+              <div style={{fontSize:7,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:2}}>Visualization response</div>
+              <div style={{background:"#fafafa",border:"1px solid #eee",borderRadius:4,padding:3,display:"flex",justifyContent:"center"}}>
+                <VegaChart spec={td.spec} width={246} height={108}/>
+              </div>
+            </div>
+            <div style={{padding:"5px 12px 0"}}>
+              <div style={{fontSize:7,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:2}}>Natural language response</div>
+              <div style={{fontSize:8.5,color:"#333",lineHeight:1.35,fontStyle:"italic"}}>"{td.nl}"</div>
+            </div>
+            <div style={{padding:"5px 12px 8px",flex:1,minHeight:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+              <div style={{fontSize:7,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4}}>Metric scoring</div>
+              <div style={{flex:1,minHeight:0,overflowY:"auto",paddingRight:2}} className="metric-scroll">
+                {parseSections(td.metrics).map((s,i) => (
+                  <MetricSection key={i} label={s.label} metrics={s.metrics} overall={s.overall} accent={s.accent}/>
+                ))}
               </div>
             </div>
           </div>
@@ -73,49 +1577,50 @@
       );
     }
 
-    function Back({card}){
-      const cat=CATS[card.cat];const ex=card.ex;
-      const sbarBg=`${cat.bg}12`;
-      const sbarTxt=`${cat.bg}55`;
-      const sideLabel=`${RESP[card.rt]} – ${DOMAINS[ex.domain]}`;
-      const tiers=[
-        {label:"CORRECT",icon:"✓",color:"#04E1CB",tc:"#032D60",text:ex.correct},
-        {label:"PARTIALLY CORRECT",icon:"~",color:"#FCC003",tc:"#5A4500",text:ex.partial},
-        {label:"INCORRECT",icon:"✗",color:"#FF538A",tc:"#6B1A32",text:ex.incorrect},
+    function OldBack({card}) {
+      const cat = CATS[card.cat];
+      const ex = card.ex;
+      const sbarBg = `${cat.bg}12`;
+      const sbarTxt = `${cat.bg}55`;
+      const sideLabel = `${RESP[card.rt]} – ${DOMAINS[ex.domain]}`;
+      const tiers = [
+        {label:"CORRECT", icon:"✓", color:"#04E1CB", tc:"#032D60", text:ex.correct},
+        {label:"PARTIALLY CORRECT", icon:"~", color:"#FCC003", tc:"#5A4500", text:ex.partial},
+        {label:"INCORRECT", icon:"✗", color:"#FF538A", tc:"#6B1A32", text:ex.incorrect},
       ];
-      return(
-        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:8,overflow:"hidden",display:"flex",transform:"rotateY(180deg)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
-          <div style={{width:18,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
-            <span style={{fontSize:6,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
+      return (
+        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
+          <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
+            <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
           </div>
           <div style={{flex:1,background:"#fff",display:"flex",flexDirection:"column"}}>
-            <div style={{height:4,background:cat.bg}}/>
-            <div style={{padding:"6px 10px",flex:1,display:"flex",flexDirection:"column"}}>
-              <div style={{fontSize:8,fontWeight:700,color:cat.bg,marginBottom:5}}>{cat.label} · {card.title}</div>
-              <div style={{background:"#F5F5F3",borderRadius:5,padding:"4px 7px",marginBottom:5}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}}>
-                  <span style={{fontSize:6,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase"}}>User asks</span>
-                  <span style={{fontSize:5.5,color:"#bbb",fontWeight:500}}>{ex.product}</span>
+            <div style={{height:5,background:cat.bg}}/>
+            <div style={{padding:"10px 14px",flex:1,display:"flex",flexDirection:"column"}}>
+              <div style={{fontSize:11,fontWeight:700,color:cat.bg,marginBottom:8}}>{cat.label} · {card.title}</div>
+              <div style={{background:"#F5F5F3",borderRadius:6,padding:"6px 10px",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
+                  <span style={{fontSize:8,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase"}}>User asks</span>
+                  <span style={{fontSize:7.5,color:"#bbb",fontWeight:500}}>{ex.product}</span>
                 </div>
-                <div style={{fontSize:8.5,color:"#333",fontWeight:600,lineHeight:1.3}}>{ex.utterance}</div>
+                <div style={{fontSize:11,color:"#333",fontWeight:600,lineHeight:1.3}}>{ex.utterance}</div>
               </div>
-              {tiers.map((t,i)=>(
-                <div key={i} style={{marginBottom:i<2?3:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:1}}>
-                    <div style={{width:10,height:10,borderRadius:5,background:t.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:t.label==="INCORRECT"?"#fff":"#032D60",fontWeight:800,lineHeight:1}}>{t.icon}</div>
-                    <span style={{fontSize:6,fontWeight:800,color:t.tc,letterSpacing:"0.04em"}}>{t.label}</span>
+              {tiers.map((t,i) => (
+                <div key={i} style={{marginBottom:i<2?7:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
+                    <div style={{width:14,height:14,borderRadius:7,background:t.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:t.label==="INCORRECT"?"#fff":"#032D60",fontWeight:800,lineHeight:1}}>{t.icon}</div>
+                    <span style={{fontSize:8,fontWeight:800,color:t.tc,letterSpacing:"0.04em"}}>{t.label}</span>
                   </div>
-                  <div style={{fontSize:7.5,color:t.tc,lineHeight:1.35,paddingLeft:13}}>{t.text}</div>
+                  <div style={{fontSize:10,color:t.tc,lineHeight:1.4,paddingLeft:19}}>{t.text}</div>
                 </div>
               ))}
-              <div style={{flex:1,minHeight:2}}/>
+              <div style={{flex:1,minHeight:4}}/>
               <div>
-                <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",marginBottom:2}}>
+                <div style={{display:"flex",height:5,borderRadius:3,overflow:"hidden",marginBottom:3}}>
                   <div style={{flex:1,background:"#04E1CB"}}/><div style={{flex:1,background:"#FCC003"}}/><div style={{flex:1,background:"#FF538A"}}/>
                 </div>
                 <div style={{display:"flex",gap:1}}>
-                  {card.spectrum.map((l,i)=>(
-                    <span key={i} style={{flex:1,fontSize:5.5,lineHeight:1.2,color:["#032D60","#5A4500","#6B1A32"][i],fontWeight:500,textAlign:["left","center","right"][i]}}>{l}</span>
+                  {card.spectrum.map((l,i) => (
+                    <span key={i} style={{flex:1,fontSize:7.5,lineHeight:1.25,color:["#032D60","#5A4500","#6B1A32"][i],fontWeight:500,textAlign:["left","center","right"][i]}}>{l}</span>
                   ))}
                 </div>
               </div>
@@ -125,37 +1630,65 @@
       );
     }
 
-    function FlipCard({card}){const[f,setF]=useState(false);return(<div onClick={()=>setF(!f)} style={{perspective:1000,cursor:"pointer",width:215,height:301,flexShrink:0}}><div style={{position:"relative",width:"100%",height:"100%",transformStyle:"preserve-3d",transition:"transform 0.5s cubic-bezier(0.4,0,0.2,1)",transform:f?"rotateY(180deg)":"rotateY(0deg)"}}><Front card={card}/><Back card={card}/></div></div>);}
+    function FlipCard({card}) {
+      const [f, setF] = useState(false);
+      const Back = card.tier ? NewBack : OldBack;
+      return (
+        <div onClick={() => setF(!f)} style={{perspective:1000,cursor:"pointer",width:300,height:440,flexShrink:0}}>
+          <div style={{position:"relative",width:"100%",height:"100%",transformStyle:"preserve-3d",transition:"transform 0.55s cubic-bezier(0.4,0,0.2,1)",transform:f?"rotateY(180deg)":"rotateY(0deg)"}}>
+            <Front card={card}/>
+            <Back card={card}/>
+          </div>
+        </div>
+      );
+    }
 
-    const catOrder=["data","chartType","functionality","design","factual","analytical","conversation"];
+    const catOrder = ["data","chartType","functionality","design","factual","analytical","conversation"];
+    const tierOrder = ["correct","partial","incorrect"];
 
-    function LexaraDeck(){
-      const[cf,setCf]=useState("all");const[df,setDf]=useState("all");
-      const filtered=allCards.filter(c=>(cf==="all"||c.cat===cf)&&(df==="all"||c.ex.domain===df));
-      return(
-        <div style={{fontFamily:"'SF Pro Display','Segoe UI',system-ui,sans-serif",maxWidth:1060,margin:"0 auto",padding:"0 8px"}}>
-          <div style={{textAlign:"center",marginBottom:16}}>
+    function LexaraDeck() {
+      const [cf, setCf] = useState("all");
+      const [df, setDf] = useState("all");
+      const [tf, setTf] = useState("all");
+      const filtered = allCards.filter(c =>
+        (cf === "all" || c.cat === cf) &&
+        (df === "all" || c.ex.domain === df) &&
+        (tf === "all" || c.tier === tf)
+      );
+      const totalTiered = allCards.filter(c => c.tier).length;
+      return (
+        <div style={{fontFamily:"'SF Pro Display','Segoe UI',system-ui,sans-serif",maxWidth:1000,margin:"0 auto",padding:"0 12px"}}>
+          <div style={{textAlign:"center",marginBottom:18}}>
             <div style={{display:"inline-block",fontSize:9,fontWeight:800,letterSpacing:"0.14em",color:"#fff",background:"#032D60",padding:"4px 14px",borderRadius:4,textTransform:"uppercase",marginBottom:8}}>Lexara Guideline Cards</div>
-            <h1 style={{fontSize:22,fontWeight:800,color:"#032D60",margin:"8px 0 4px",letterSpacing:"-0.02em"}}>Verify Your AI Analytics</h1>
-            <p style={{fontSize:11,color:"#888",margin:0,maxWidth:540,marginLeft:"auto",marginRight:"auto"}}>52-card deck: 13 criteria × 4 domain examples. Tap any card to flip.</p>
+            <h1 style={{fontSize:24,fontWeight:800,color:"#032D60",margin:"8px 0 4px",letterSpacing:"-0.02em"}}>Verify Your AI Analytics</h1>
+            <p style={{fontSize:11.5,color:"#888",margin:0,maxWidth:600,marginLeft:"auto",marginRight:"auto"}}>13 criteria × 4 domain examples × 3 verdicts. Tap any card to flip and see the chart, NL response, and metric scoring.</p>
           </div>
           <div style={{marginBottom:6}}>
             <div style={{fontSize:9,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>Criteria</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center"}}>
               <button onClick={()=>setCf("all")} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:cf==="all"?"#032D60":"#f0f0f0",color:cf==="all"?"#fff":"#666"}}>All</button>
-              {catOrder.map(k=>{const c=CATS[k];return (<button key={k} onClick={()=>setCf(k)} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:cf===k?c.bg:"#f0f0f0",color:cf===k?c.fg:"#666"}}>{c.label}</button>)})}
+              {catOrder.map(k => {const c = CATS[k]; return (<button key={k} onClick={()=>setCf(k)} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:cf===k?c.bg:"#f0f0f0",color:cf===k?c.fg:"#666"}}>{c.label}</button>);})}
             </div>
           </div>
-          <div style={{marginBottom:16}}>
+          <div style={{marginBottom:6}}>
             <div style={{fontSize:9,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>Domain</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center"}}>
               <button onClick={()=>setDf("all")} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:df==="all"?"#032D60":"#f0f0f0",color:df==="all"?"#fff":"#666"}}>All</button>
-              {Object.entries(DOMAINS).map(([k,v])=><button key={k} onClick={()=>setDf(k)} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:df===k?"#555":"#f0f0f0",color:df===k?"#fff":"#666"}}>{v}</button>)}
+              {Object.entries(DOMAINS).map(([k,v]) => <button key={k} onClick={()=>setDf(k)} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:df===k?"#555":"#f0f0f0",color:df===k?"#fff":"#666"}}>{v}</button>)}
             </div>
           </div>
-          <div style={{textAlign:"center",marginBottom:10}}><span style={{fontSize:10,color:"#999"}}>Showing {filtered.length} of 52 cards</span></div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center",marginBottom:24}}>
-            {filtered.map(card=><FlipCard key={card.cardKey} card={card}/>)}
+          {totalTiered > 0 && (
+            <div style={{marginBottom:18}}>
+              <div style={{fontSize:9,fontWeight:700,color:"#aaa",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>Verdict</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center"}}>
+                <button onClick={()=>setTf("all")} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:tf==="all"?"#032D60":"#f0f0f0",color:tf==="all"?"#fff":"#666"}}>All</button>
+                {tierOrder.map(k => {const t = TIER_META[k]; return (<button key={k} onClick={()=>setTf(k)} style={{padding:"4px 12px",borderRadius:4,fontSize:9,fontWeight:700,cursor:"pointer",border:"none",background:tf===k?t.color:"#f0f0f0",color:tf===k?t.tc:"#666"}}>{t.icon} {t.label}</button>);})}
+              </div>
+            </div>
+          )}
+          <div style={{textAlign:"center",marginBottom:12}}><span style={{fontSize:10,color:"#999"}}>Showing {filtered.length} of {allCards.length} cards</span></div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:14,justifyContent:"center",marginBottom:24}}>
+            {filtered.map(card => <FlipCard key={card.cardKey} card={card}/>)}
           </div>
         </div>
       );
