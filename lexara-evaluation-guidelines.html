@@ -13,6 +13,10 @@
     .metric-scroll::-webkit-scrollbar-track { background: transparent; }
     .metric-scroll::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
     .metric-scroll::-webkit-scrollbar-thumb:hover { background: #bbb; }
+    /* Mobile flip-card fixes: force GPU compositing per face so backface-visibility works on Safari/Chrome mobile */
+    .flip-inner { -webkit-transform-style: preserve-3d; transform-style: preserve-3d; -webkit-perspective: 1000px; perspective: 1000px; }
+    .flip-face { -webkit-backface-visibility: hidden; backface-visibility: hidden; -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); }
+    .flip-face-back { -webkit-transform: rotateY(180deg) translate3d(0,0,0); transform: rotateY(180deg) translate3d(0,0,0); }
   </style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -1495,7 +1499,7 @@
         focusRationale = (focusMetric && focusMetric.why) || card.spectrum[tierIdx];
       }
       return (
-        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",background:cat.bg,color:cat.fg,boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
+        <div className="flip-face" style={{position:"absolute",inset:0,backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",background:cat.bg,color:cat.fg,boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
           <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
             <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
           </div>
@@ -1535,7 +1539,7 @@
       const sbarTxt = `${cat.bg}55`;
       const sideLabel = `${RESP[card.rt]} – ${DOMAINS[card.ex.domain]}`;
       return (
-        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)",background:"#fff"}}>
+        <div className="flip-face flip-face-back" style={{position:"absolute",inset:0,backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg) translate3d(0,0,0)",WebkitTransform:"rotateY(180deg) translate3d(0,0,0)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)",background:"#fff"}}>
           <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
             <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
           </div>
@@ -1589,7 +1593,7 @@
         {label:"INCORRECT", icon:"✗", color:"#FF538A", tc:"#6B1A32", text:ex.incorrect},
       ];
       return (
-        <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
+        <div className="flip-face flip-face-back" style={{position:"absolute",inset:0,backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden",borderRadius:10,overflow:"hidden",display:"flex",transform:"rotateY(180deg) translate3d(0,0,0)",WebkitTransform:"rotateY(180deg) translate3d(0,0,0)",boxShadow:"0 4px 16px rgba(0,0,0,0.18)"}}>
           <div style={{width:22,background:sbarBg,display:"flex",alignItems:"center",justifyContent:"center",writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",flexShrink:0}}>
             <span style={{fontSize:7,fontWeight:700,letterSpacing:"0.08em",color:sbarTxt,textTransform:"uppercase",whiteSpace:"nowrap"}}>{sideLabel}</span>
           </div>
@@ -1634,8 +1638,8 @@
       const [f, setF] = useState(false);
       const Back = card.tier ? NewBack : OldBack;
       return (
-        <div onClick={() => setF(!f)} style={{perspective:1000,cursor:"pointer",width:300,height:440,flexShrink:0}}>
-          <div style={{position:"relative",width:"100%",height:"100%",transformStyle:"preserve-3d",transition:"transform 0.55s cubic-bezier(0.4,0,0.2,1)",transform:f?"rotateY(180deg)":"rotateY(0deg)"}}>
+        <div onClick={() => setF(!f)} style={{perspective:1000,WebkitPerspective:1000,cursor:"pointer",width:300,height:440,flexShrink:0}}>
+          <div className="flip-inner" style={{position:"relative",width:"100%",height:"100%",transformStyle:"preserve-3d",WebkitTransformStyle:"preserve-3d",transition:"transform 0.55s cubic-bezier(0.4,0,0.2,1)",WebkitTransition:"-webkit-transform 0.55s cubic-bezier(0.4,0,0.2,1)",transform:f?"rotateY(180deg)":"rotateY(0deg)",WebkitTransform:f?"rotateY(180deg)":"rotateY(0deg)"}}>
             <Front card={card}/>
             <Back card={card}/>
           </div>
