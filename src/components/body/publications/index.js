@@ -1,7 +1,7 @@
 import React from "react";
 import "./publications.css";
 import { Row, Col } from "antd";
-import { LinkOutlined, FilePdfOutlined, RocketOutlined } from "@ant-design/icons";
+import { LinkOutlined, FilePdfOutlined, RocketOutlined, BookOutlined } from "@ant-design/icons";
 
 import lexaraImg from "../../../assets/lexara.png";
 import syncsenseImg from "../../../assets/SyncSense.png";
@@ -11,6 +11,7 @@ const linkIcons = {
   Project: <LinkOutlined />,
   PDF: <FilePdfOutlined />,
   Prototype: <RocketOutlined />,
+  "Evaluation Guidelines": <BookOutlined />,
 };
 
 const publications = [
@@ -31,6 +32,10 @@ const publications = [
       {
         label: "Prototype",
         url: "https://lexara-6b38293fcdac.herokuapp.com/",
+      },
+      {
+        label: "Evaluation Guidelines",
+        url: `${process.env.PUBLIC_URL}/lexara-evaluation-guidelines.html`,
       },
       {
         label: "PDF",
