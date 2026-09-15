@@ -2,7 +2,7 @@ import React from "react";
 import "../publications/publications.css";
 import "./impact.css";
 import { Row, Col } from "antd";
-import { LinkOutlined, ArrowRightOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { LinkOutlined, PlayCircleOutlined } from "@ant-design/icons";
 
 import chatgptPluginImg from "../../../assets/tableau-chatgpt-plugin.png";
 import lexaraKeynoteImg from "../../../assets/lexara-keynote.jpg";
@@ -15,10 +15,9 @@ const linkIcons = {
 const impact = [
   {
     id: "chatgpt-plugin",
-    research: "Interactive conversational analytics",
     product: "Tableau plugin for ChatGPT",
     description:
-      "Research on how people explore data through conversation shaped Tableau's plugin for ChatGPT. Presented at Tableau Keynotes at Dreamforce 2025 and Dreamforce 2026.",
+      "Research on interactive conversational analytics shaped this plugin. Presented at Tableau Keynotes at Dreamforce 2025 and Dreamforce 2026.",
     image: chatgptPluginImg,
     imageAlt:
       "Tableau prompt suggestions in ChatGPT, such as \"Show me the Commission Model dashboard\"",
@@ -37,10 +36,9 @@ const impact = [
   },
   {
     id: "tableau-agent-eval",
-    research: "Lexara: Evaluation Framework for Conversational Analytics",
     product: "AI Model Evaluation Tool for Tableau Agent",
     description:
-      "Research on evaluating conversational analytics became the AI Model Evaluation Tool for Tableau Agent. Announced at Tableau Conference 2026.",
+      "Lexara, a research framework for evaluating conversational analytics, became this tool. Announced at Tableau Conference 2026.",
     image: lexaraKeynoteImg,
     imageAlt:
       "Introducing Lexara on stage at Tableau Conference 2026",
@@ -83,19 +81,7 @@ function Impact() {
                   </div>
                 </a>
               )}
-              <div className="impact-flow">
-                <div className="impact-stage">
-                  <span className="impact-stage-label">Research</span>
-                  <p className="impact-stage-text">{item.research}</p>
-                </div>
-                <span className="impact-arrow" aria-hidden="true">
-                  <ArrowRightOutlined />
-                </span>
-                <div className="impact-stage impact-stage-product">
-                  <span className="impact-stage-label">Product</span>
-                  <p className="impact-stage-text">{item.product}</p>
-                </div>
-              </div>
+              <h3 className="pub-card-title">{item.product}</h3>
               <p className="impact-description">{item.description}</p>
               <div className="pub-card-links">
                 {item.links.map((link) => (
