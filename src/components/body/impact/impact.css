@@ -1,0 +1,112 @@
+/* Product impact card — matches the publication card shell */
+.impact-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid #e8e8e8;
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px 0;
+  transition: box-shadow 0.2s ease;
+}
+
+.impact-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Optional card image — uniform 16:9 crop so cards line up */
+.impact-img-link {
+  display: block;
+  text-decoration: none;
+  margin: -18px 0 16px;
+}
+
+.impact-img-wrap {
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+}
+
+.impact-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Research -> Product flow — stacked, since the cards are narrow */
+.impact-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 16px 12px;
+}
+
+.impact-stage {
+  background: #fafafa;
+  border: 1px solid #efefef;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.impact-stage-product {
+  background: #f0fdfa;
+  border-color: #ccfbf1;
+}
+
+.impact-stage-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.impact-stage-product .impact-stage-label {
+  color: #0d9488;
+}
+
+.impact-stage-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.impact-arrow {
+  display: flex;
+  justify-content: center;
+  color: #0d9488;
+  font-size: 13px;
+  line-height: 1;
+  transform: rotate(90deg);
+}
+
+.impact-description {
+  font-size: 13.5px;
+  color: #555;
+  line-height: 1.55;
+  margin: 0 16px 14px;
+}
+
+/* Push the links row to the bottom so cards align */
+.impact-card .pub-card-links {
+  margin-top: auto;
+}
+
+/* Responsive — stack the flow and turn the arrow downward */
+@media (max-width: 575px) {
+  .impact-card {
+    border-radius: 12px;
+  }
+
+  .impact-img-wrap {
+    border-radius: 12px 12px 0 0;
+  }
+}

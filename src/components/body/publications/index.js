@@ -1,9 +1,10 @@
 import React from "react";
 import "./publications.css";
 import { Row, Col } from "antd";
-import { LinkOutlined, FilePdfOutlined, RocketOutlined, BookOutlined } from "@ant-design/icons";
+import { LinkOutlined, FilePdfOutlined, RocketOutlined } from "@ant-design/icons";
 
 import lexaraImg from "../../../assets/lexara.png";
+import lexaraRfImg from "../../../assets/lexara-rf-chart.png";
 import syncsenseImg from "../../../assets/SyncSense.png";
 import criticalityImg from "../../../assets/criticality.png";
 
@@ -11,7 +12,6 @@ const linkIcons = {
   Project: <LinkOutlined />,
   PDF: <FilePdfOutlined />,
   Prototype: <RocketOutlined />,
-  "Evaluation Guidelines": <BookOutlined />,
 };
 
 const publications = [
@@ -34,12 +34,28 @@ const publications = [
         url: "https://lexara-6b38293fcdac.herokuapp.com/",
       },
       {
-        label: "Evaluation Guidelines",
-        url: `${process.env.PUBLIC_URL}/lexara-evaluation-guidelines.html`,
+        label: "PDF",
+        url: "https://www.tableau.com/sites/default/files/2026-03/chi26-466--1-.pdf",
+      },
+    ],
+  },
+  {
+    id: "lexara-rf",
+    title: "Lexara-RF",
+    description:
+      "Reference-free metrics for evaluating conversational visual analytics agents",
+    venue: "IEEE VIS",
+    venueUrl: "https://ieeevis.org/year/2026/welcome/",
+    year: 2026,
+    image: lexaraRfImg,
+    links: [
+      {
+        label: "Project",
+        url: "https://www.tableau.com/research/publications/lexara-rf",
       },
       {
         label: "PDF",
-        url: "https://www.tableau.com/sites/default/files/2026-03/chi26-466--1-.pdf",
+        url: "https://www.tableau.com/sites/default/files/2026-09/Lexara-RF-VIS-2026.pdf",
       },
     ],
   },
@@ -102,7 +118,7 @@ function Publications() {
       </p>
       <Row gutter={[24, 24]} className="publications-grid">
         {publications.map((pub) => (
-          <Col key={pub.id} xs={24} sm={12} lg={8}>
+          <Col key={pub.id} xs={24} sm={12} lg={6}>
             <div className="pub-card">
               <a
                 href={pub.links.find((l) => l.label === "Project")?.url || "#"}

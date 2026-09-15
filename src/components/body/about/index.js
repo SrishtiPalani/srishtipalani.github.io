@@ -6,6 +6,7 @@ import { Button, Tooltip, Row, Col, Divider } from 'antd';
 
 import namePronunciation from "../../../assets/SrishtiPalaniPronunciation.mp3";
 import Publications from "../publications/index";
+import Impact from "../impact/index";
 import Workshops from "../workshops/index";
 
 function About() {
@@ -82,6 +83,18 @@ function About() {
           <h2 className="news-title info-name">News and Upcoming Travel</h2>
           <ul className="news-list">
             <li className="news-item">
+              <span className="news-date">11/2026</span>
+              <span className="news-text">
+                <a href="https://ieeevis.org/year/2026/info/program/papers_list/" target="_blank" rel="noreferrer">IEEE VIS 2026</a> in Boston, MA to present <a href="https://www.tableau.com/research/publications/lexara-rf" target="_blank" rel="noreferrer"><i>Lexara-RF: Reference-Free Metrics for Evaluating Conversational Visual Analytics Agents</i></a>
+              </span>
+            </li>
+            <li className="news-item">
+              <span className="news-date">09/2026</span>
+              <span className="news-text">
+                Announced at Dreamforce: the <a href="https://openai.com/business/plugins/tableau/" target="_blank" rel="noreferrer">Tableau plugin for ChatGPT</a>, bringing new skills and tools to ChatGPT Work so anyone can build interactive visualizations, explore their data, and create content using plain language. Built on my first research project at Tableau on conversational visual analytics.
+              </span>
+            </li>
+            <li className="news-item">
               <span className="news-date">07/2026</span>
               <span className="news-text">
                 <a href="https://iui.acm.org/2026/" target="_blank" rel="noreferrer">ACM Intelligent User Interfaces (IUI) 2026</a>
@@ -137,6 +150,10 @@ function About() {
     <Divider />
 
     <Publications />
+
+    <Divider />
+
+    <Impact />
 
     <Divider />
 

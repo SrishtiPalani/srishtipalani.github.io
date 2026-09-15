@@ -134,7 +134,7 @@ function Workshops() {
       </h2>
       <Row gutter={[24, 24]} className="publications-grid">
         {workshops.map((item) => (
-          <Col key={item.id} xs={24} sm={24} lg={8}>
+          <Col key={item.id} xs={24} sm={12} lg={6}>
             <div className="pub-card workshop-card">
               {item.hasVideoCarousel && <VideoCarousel />}
               {item.image && (
