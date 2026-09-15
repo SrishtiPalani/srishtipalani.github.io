@@ -67,9 +67,9 @@ function About() {
       <Col xs={24} xl={16}>
           <div className="about-bio-inner">
           <p style={{ fontSize: '15px'}}>
-          I conduct research at the intersection of <strong className="info-name" style={{ fontSize: 'inherit' }}>Human-Computer Interaction, Natural Language Processing and Cognitive Science</strong>. I design and engineer AI-based algorithms and interaction mechanisms that augment human cognition and evaluate their impact, bridging system building with empirical studies of how these tools reshape people’s workflows and practices.<br /> <br />
-          I received my PhD and Master's from <a href="https://ucsd.edu" target="_blank" rel="noreferrer">University of California, San Diego</a>, and graduated <i>summa cum laude</i> from <a href="https://www.mtholyoke.edu" target="_blank" rel="noreferrer">Mount Holyoke College, MA</a>.{' '}
-          I regularly publish my research at top-tier HCI and AI venues and conferences. Check out a full list of <a href="https://scholar.google.com/citations?user=VQV7AYUAAAAJ&hl=en" target="_blank" rel="noreferrer">publications here</a>. My work has been recognized with best paper awards and honors such as <a href="https://research.google/programs-and-events/phd-fellowship/recipients/?filtertab=2021" target="_blank" rel="noreferrer">Google PhD Research Fellowship</a> and <a href="https://cra.org/about/awards/outstanding-undergraduate-researcher-award/#2018" target="_blank" rel="noreferrer"> CRA Outstanding Undergraduate Researcher Award</a>. I have collaborated with top research labs such as <a href="https://www.microsoft.com/en-us/research/" target="_blank" rel="noreferrer">Microsoft Research</a>, <a href="https://www.autodesk.com/research/overview" target="_blank" rel="noreferrer">Autodesk Research</a>, and the <a href="https://allenai.org/about" target="_blank" rel="noreferrer">Allen Institute for AI</a>. Beyond publications and patents, my work also directly informs product roadmaps; most recently, with features announced at the <a href="https://www.tableau.com/events/dreamforce-2025-keynote" target="_blank" rel="noreferrer">Tableau Keynote at Dreamforce 2025</a>.
+          I conduct research at the intersection of <strong className="info-name" style={{ fontSize: 'inherit' }}>Human-Computer Interaction, Natural Language Processing and Cognitive Science</strong>. I design and engineer AI-based algorithms and interaction mechanisms that augment human cognition. My research bridges system building with empirical studies of how these tools reshape people’s workflows and practices.<br /> <br />
+          I received my PhD and Master's from the <a href="https://ucsd.edu" target="_blank" rel="noreferrer">University of California, San Diego</a>, and my Bachelor's <i>summa cum laude</i> from <a href="https://www.mtholyoke.edu" target="_blank" rel="noreferrer">Mount Holyoke College, MA</a>.{' '}
+          I regularly publish my research at top-tier HCI and AI venues and conferences. Check out a full list of <a href="https://scholar.google.com/citations?user=VQV7AYUAAAAJ&hl=en" target="_blank" rel="noreferrer">publications here</a>. My work has been recognized with best paper awards and honors such as <a href="https://research.google/programs-and-events/phd-fellowship/recipients/?filtertab=2021" target="_blank" rel="noreferrer">Google PhD Research Fellowship</a> and <a href="https://cra.org/about/awards/outstanding-undergraduate-researcher-award/#2018" target="_blank" rel="noreferrer"> CRA Outstanding Undergraduate Researcher Award</a>. I have collaborated with top research labs such as <a href="https://www.microsoft.com/en-us/research/" target="_blank" rel="noreferrer">Microsoft Research</a>, <a href="https://www.autodesk.com/research/overview" target="_blank" rel="noreferrer">Autodesk Research</a>, and the <a href="https://allenai.org/about" target="_blank" rel="noreferrer">Allen Institute for AI</a>. Beyond publications and patents, my work also directly informs product roadmaps; most recently, with features announced at <a href="https://www.salesforce.com/plus/experience/tableau_conference_2026/series/salesforce_unified_platform_at_tableau_conference_2026/episode/episode-s1e1" target="_blank" rel="noreferrer">Tableau Conference 2026</a> and the <a href="https://www.tableau.com/events/dreamforce-2025-keynote" target="_blank" rel="noreferrer">Tableau Keynote at Dreamforce 2025</a>.
           <br /><br />
           I'm always interested in discussing research collaborations or potential projects. The best way to reach me is by emailing srishti [dot] palani [at] salesforce [dot] com.
           </p>
@@ -82,12 +82,31 @@ function About() {
           <h2 className="news-title info-name">News and Upcoming Travel</h2>
           <ul className="news-list">
             <li className="news-item">
+              <span className="news-date">07/2026</span>
+              <span className="news-text">
+                <a href="https://iui.acm.org/2026/" target="_blank" rel="noreferrer">ACM Intelligent User Interfaces (IUI) 2026</a>
+              </span>
+            </li>
+            <li className="news-item">
+              <span className="news-date">05/2026</span>
+              <span className="news-text">
+                <a href="https://www.salesforce.com/tableau-conference/" target="_blank" rel="noreferrer">Tableau Conference</a> to:
+                <ul className="news-bullets">
+                  <li>Present <a href="https://www.salesforce.com/plus/experience/tableau_conference_2026/series/salesforce_unified_platform_at_tableau_conference_2026/episode/episode-s1e1" target="_blank" rel="noreferrer"><i>Verify Your AI: The Analyst&#8217;s Guide to Trust and Quality</i></a></li>
+                  <li>Run research studies with customers at <a href="https://www.tableau.com/products/user-research-interest" target="_blank" rel="noreferrer">Tableau Labs</a></li>
+                </ul>
+              </span>
+            </li>
+            <li className="news-item">
               <span className="news-date">04/2026</span>
               <span className="news-text">
-                Upcoming travel to <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a> in Barcelona, Spain to:
+                <a href="https://chi2026.acm.org/" target="_blank" rel="noreferrer">ACM CHI 2026</a> in Barcelona, Spain to:
                 <ul className="news-bullets">
                   <li>Present <a href="https://www.tableau.com/research/publications/lexara" target="_blank" rel="noreferrer"><i>Lexara: A User-Centered Toolkit for Evaluating Large Language Models for Conversational Visual Analytics</i></a></li>
                   <li>Co-organize Workshop on <i><a href="https://ai-tools-for-thought.github.io/workshop/" target="_blank" rel="noreferrer">Tools for Thought: Understanding, Protecting, and Augmenting Human Cognition with Generative AI&#8212;From Vision to Implementation</a></i> </li>
+                  <li>Present at <a href="https://bialign-workshop.github.io/2026" target="_blank" rel="noreferrer">Human-AI Interaction Alignment Workshop</a></li>
+                  <li>Present at <a href="https://sites.google.com/view/aichaos/chi-2026" target="_blank" rel="noreferrer">AI CHAOS Workshop</a></li>
+                  <li>See presentation of <a href="https://www.tableau.com/research/publications/syncsense" target="_blank" rel="noreferrer"><i>&#8220;I Need to Find That One Chart&#8221;: How Data Workers Navigate, Make Sense of, and Communicate Analytical Conversations</i></a></li>
                 </ul>
               </span>
             </li>
