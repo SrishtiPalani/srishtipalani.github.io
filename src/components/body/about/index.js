@@ -91,7 +91,7 @@ function About() {
             <li className="news-item">
               <span className="news-date">09/2026</span>
               <span className="news-text">
-                Announced at Dreamforce: the <a href="https://openai.com/business/plugins/tableau/" target="_blank" rel="noreferrer">Tableau plugin for ChatGPT</a>, bringing new skills and tools to ChatGPT Work so anyone can build interactive visualizations, explore their data, and create content using plain language. Built on my first research project at Tableau on conversational visual analytics.
+                Announced at <a href="https://www.salesforce.com/plus/experience/dreamforce_2026/tableau---tableau-keynote-_replay_" target="_blank" rel="noreferrer">Dreamforce</a>: the <a href="https://openai.com/business/plugins/tableau/" target="_blank" rel="noreferrer">Tableau plugin for ChatGPT</a>, bringing new skills and tools to ChatGPT Work so anyone can build interactive visualizations, explore their data, and create content using plain language. Built on my first research project at Tableau on conversational visual analytics.
               </span>
             </li>
             <li className="news-item">
