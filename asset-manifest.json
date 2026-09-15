@@ -1,23 +1,26 @@
 {
   "files": {
-    "main.css": "/static/css/main.cdb4c8fe.css",
-    "main.js": "/static/js/main.2d8b145f.js",
+    "main.css": "/static/css/main.54806e20.css",
+    "main.js": "/static/js/main.abe15f5d.js",
     "static/js/787.861fdc3f.chunk.js": "/static/js/787.861fdc3f.chunk.js",
     "static/media/lexara.png": "/static/media/lexara.596b77c549d18a919406.png",
     "static/media/image.png": "/static/media/image.f4101f2ed4158676309c.png",
     "static/media/SyncSense.png": "/static/media/SyncSense.c7f03d0b8917173df27d.png",
     "static/media/Tools_for_Thought_with_Generative_AI_2026.pdf": "/static/media/Tools_for_Thought_with_Generative_AI_2026.f6c09fcb53817aee8396.pdf",
+    "static/media/tableau-chatgpt-plugin.png": "/static/media/tableau-chatgpt-plugin.272828ce0bc49e5db9fa.png",
     "static/media/SrishtiPalani.png": "/static/media/SrishtiPalani.52dc3419e8a52957fa4a.png",
+    "static/media/lexara-keynote.jpg": "/static/media/lexara-keynote.8ff8ed59715ebfd5651d.jpg",
     "static/media/prototyping.jpg": "/static/media/prototyping.aa865b5464d5088d5699.jpg",
     "static/media/criticality.png": "/static/media/criticality.faf4333cb22ce701012e.png",
+    "static/media/lexara-rf-chart.png": "/static/media/lexara-rf-chart.39447fd65106d0835943.png",
     "static/media/SrishtiPalaniPronunciation.mp3": "/static/media/SrishtiPalaniPronunciation.bb1cfbc3b9b41c2297a0.mp3",
     "index.html": "/index.html",
-    "main.cdb4c8fe.css.map": "/static/css/main.cdb4c8fe.css.map",
-    "main.2d8b145f.js.map": "/static/js/main.2d8b145f.js.map",
+    "main.54806e20.css.map": "/static/css/main.54806e20.css.map",
+    "main.abe15f5d.js.map": "/static/js/main.abe15f5d.js.map",
     "787.861fdc3f.chunk.js.map": "/static/js/787.861fdc3f.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.cdb4c8fe.css",
-    "static/js/main.2d8b145f.js"
+    "static/css/main.54806e20.css",
+    "static/js/main.abe15f5d.js"
   ]
 }
